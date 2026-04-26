@@ -1,4 +1,5 @@
 use crate::app;
+use crate::infra;
 
 #[derive(serde::Serialize)]
 pub struct ExportEntryNamesResponse {
@@ -45,6 +46,55 @@ pub fn export_diff_command(path: &str) -> Result<ExportDiffResponse, String> {
         }
         Err(err) => {
             eprintln!("[export_diff_command] error: {err}");
+            Err(err.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+pub fn count_source_chars_command(path: &str, paths: Vec<String>) -> usize {
+    infra::count_source_chars(path, &paths)
+}
+
+#[tauri::command]
+pub fn export_source_command(path: &str, paths: Vec<String>) -> Result<String, String> {
+    eprintln!(
+        "[export_source_command] called: path={path:?}, {} files",
+        paths.len()
+    );
+
+    match app::export_source(path, paths) {
+        Ok(output_path) => {
+            eprintln!("[export_source_command] success: exported to {output_path}");
+            Ok(output_path)
+        }
+        Err(err) => {
+            eprintln!("[export_source_command] error: {err}");
+            Err(err.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+pub fn export_filtered_tree_command(
+    path: &str,
+    paths: Vec<String>,
+) -> Result<String, String> {
+    eprintln!(
+        "[export_filtered_tree_command] called: path={path:?}, {} paths",
+        paths.len()
+    );
+
+    match infra::write_file_tree_file(path, &paths) {
+        Ok(p) => {
+            eprintln!(
+                "[export_filtered_tree_command] success: exported to {}",
+                p.display()
+            );
+            Ok(p.display().to_string())
+        }
+        Err(err) => {
+            eprintln!("[export_filtered_tree_command] error: {err}");
             Err(err.to_string())
         }
     }

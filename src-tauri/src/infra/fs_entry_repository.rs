@@ -1,9 +1,14 @@
+use chrono::Local;
 use std::env;
 use std::fmt;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+fn now_str() -> String {
+    Local::now().format("%Y%m%d%H%M%S").to_string()
+}
 
 struct TreeNode {
     name: String,
@@ -189,7 +194,7 @@ pub fn write_file_tree_file<P: AsRef<Path>>(
         .filter(|n| !n.is_empty())
         .unwrap_or("tree");
 
-    let file_name = format!("{}-tree.txt", sanitize_file_name(folder_name));
+    let file_name = format!("{}-tree-{}.txt", sanitize_file_name(folder_name), now_str());
     let output_dir = downloads_dir()?;
     fs::create_dir_all(&output_dir).map_err(|err| {
         EntryRepositoryError::CreateDownloadsDirectoryFailed {
@@ -230,6 +235,76 @@ fn build_file_tree_text(folder_path: &Path, tree_paths: &[String]) -> String {
     out
 }
 
+pub fn write_source_file<P: AsRef<Path>>(
+    folder_path: P,
+    file_paths: &[String],
+) -> Result<PathBuf, EntryRepositoryError> {
+    let folder_path = folder_path.as_ref();
+    let folder_name = folder_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .filter(|n| !n.is_empty())
+        .unwrap_or("source");
+
+    let file_name = format!("{}-source-{}.txt", sanitize_file_name(folder_name), now_str());
+    let output_dir = downloads_dir()?;
+    fs::create_dir_all(&output_dir).map_err(|err| {
+        EntryRepositoryError::CreateDownloadsDirectoryFailed {
+            path: output_dir.clone(),
+            source: err,
+        }
+    })?;
+
+    let output_path = output_dir.join(file_name);
+    let contents = build_source_text(folder_path, file_paths);
+    fs::write(&output_path, &contents).map_err(|err| EntryRepositoryError::WriteFileFailed {
+        path: output_path.clone(),
+        source: err,
+    })?;
+
+    Ok(output_path)
+}
+
+fn build_source_text(folder_path: &Path, file_paths: &[String]) -> String {
+    let mut out = String::new();
+
+    for rel_path in file_paths {
+        if rel_path.ends_with('/') {
+            continue;
+        }
+
+        let full_path = folder_path.join(rel_path);
+        let content = match fs::read_to_string(&full_path) {
+            Ok(c) => c,
+            Err(_) => continue, // skip binary or unreadable files
+        };
+
+        out.push_str(&format!("=== {} ===\n", rel_path));
+        out.push_str(&content);
+        if !content.ends_with('\n') {
+            out.push('\n');
+        }
+        out.push('\n');
+    }
+
+    out
+}
+
+pub fn count_source_chars<P: AsRef<Path>>(folder_path: P, file_paths: &[String]) -> usize {
+    let folder_path = folder_path.as_ref();
+    let mut total = 0usize;
+    for rel_path in file_paths {
+        if rel_path.ends_with('/') {
+            continue;
+        }
+        let full_path = folder_path.join(rel_path);
+        if let Ok(content) = fs::read_to_string(&full_path) {
+            total += content.chars().count();
+        }
+    }
+    total
+}
+
 pub fn get_git_diff<P: AsRef<Path>>(
     folder_path: P,
 ) -> Result<String, EntryRepositoryError> {
@@ -266,7 +341,7 @@ pub fn write_git_diff_file<P: AsRef<Path>>(
         .filter(|n| !n.is_empty())
         .unwrap_or("diff");
 
-    let file_name = format!("{}-diff.txt", sanitize_file_name(folder_name));
+    let file_name = format!("{}-diff-{}.txt", sanitize_file_name(folder_name), now_str());
     let output_dir = downloads_dir()?;
     fs::create_dir_all(&output_dir).map_err(|err| {
         EntryRepositoryError::CreateDownloadsDirectoryFailed {
@@ -331,7 +406,7 @@ pub fn write_entry_names_file<P: AsRef<Path>>(
         .and_then(|name| name.to_str())
         .filter(|name| !name.is_empty())
         .unwrap_or("entries");
-    let file_name = format!("{}-entries.txt", sanitize_file_name(folder_name));
+    let file_name = format!("{}-entries-{}.txt", sanitize_file_name(folder_name), now_str());
     let output_dir = downloads_dir()?;
     fs::create_dir_all(&output_dir).map_err(|err| {
         EntryRepositoryError::CreateDownloadsDirectoryFailed {

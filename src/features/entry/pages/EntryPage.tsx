@@ -10,12 +10,56 @@ import {
   Snackbar,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { countSourceChars } from "../api/entryApi";
 import { useEntryNames } from "../hooks/useEntryNames";
 
-type Mode = "tree" | "diff";
+type ContentMode = "tree" | "diff";
+type LangMode = "all" | "rust" | "haskell" | "csharp" | "react";
+
+const LANG_LABELS: Record<LangMode, string> = {
+  all: "ALL",
+  rust: "RUST",
+  haskell: "HASKELL",
+  csharp: "C#",
+  react: "REACT",
+};
+
+const LANG_PATTERNS: Record<Exclude<LangMode, "all">, string[]> = {
+  rust: [".rs", ".toml", ".lock"],
+  haskell: [".hs", ".lhs", ".cabal"],
+  csharp: [".cs", ".csproj", ".sln", ".xaml", ".razor", ".cshtml"],
+  react: [".tsx", ".ts", ".jsx", ".js", ".css", ".scss", ".less", ".json", ".svg"],
+};
+
+function matchesLang(filePath: string, lang: LangMode): boolean {
+  if (lang === "all") return true;
+  const patterns = LANG_PATTERNS[lang];
+  const lower = filePath.toLowerCase();
+  return patterns.some((ext) => lower.endsWith(ext));
+}
+
+function filterEntries(entries: string[], lang: LangMode): string[] {
+  if (lang === "all") return entries;
+
+  const matchingFiles = new Set(
+    entries.filter((e) => !e.endsWith("/") && matchesLang(e, lang)),
+  );
+
+  const dirsToKeep = new Set<string>();
+  for (const filePath of matchingFiles) {
+    const parts = filePath.split("/");
+    for (let i = 1; i < parts.length; i++) {
+      dirsToKeep.add(parts.slice(0, i).join("/") + "/");
+    }
+  }
+
+  return entries.filter((e) => (e.endsWith("/") ? dirsToKeep.has(e) : matchingFiles.has(e)));
+}
 
 function parseTreePath(path: string) {
   const isDir = path.endsWith("/");
@@ -36,7 +80,8 @@ function diffLineColor(line: string): string {
 }
 
 export function EntryPage() {
-  const [mode, setMode] = useState<Mode>("tree");
+  const [contentMode, setContentMode] = useState<ContentMode>("tree");
+  const [langMode, setLangMode] = useState<LangMode>("all");
 
   const {
     path,
@@ -52,24 +97,47 @@ export function EntryPage() {
     scanEntries,
     fetchDiff,
     downloadEntries,
+    downloadSource,
     downloadDiff,
     openSavedFileFolder,
     clearErrorMessage,
   } = useEntryNames();
 
+  const filteredEntries = useMemo(
+    () => filterEntries(entries, langMode),
+    [entries, langMode],
+  );
+  const filteredFiles = useMemo(
+    () => filteredEntries.filter((e) => !e.endsWith("/")),
+    [filteredEntries],
+  );
+
+  const [charCount, setCharCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!scannedPath || filteredFiles.length === 0) {
+      setCharCount(null);
+      return;
+    }
+    countSourceChars(scannedPath, filteredFiles)
+      .then(setCharCount)
+      .catch(() => setCharCount(null));
+  }, [scannedPath, filteredFiles]);
+
+  const diffLines = diffContent.split("\n");
+  const isAnyLoading = isLoading || isDiffLoading;
+  const panelEmpty =
+    contentMode === "tree" ? filteredEntries.length === 0 : diffContent === "";
+
   function handleTree() {
-    setMode("tree");
+    setContentMode("tree");
     scanEntries();
   }
 
   function handleDiff() {
-    setMode("diff");
+    setContentMode("diff");
     fetchDiff();
   }
-
-  const isAnyLoading = isLoading || isDiffLoading;
-  const diffLines = diffContent.split("\n");
-  const panelEmpty = mode === "tree" ? entries.length === 0 : diffContent === "";
 
   return (
     <Box
@@ -97,7 +165,7 @@ export function EntryPage() {
               Code to Prompt
             </Typography>
             <Typography component="h1" variant="h3" sx={{ fontWeight: 800 }}>
-              {mode === "tree" ? "File Tree" : "Git Diff"}
+              {contentMode === "tree" ? "File Tree" : "Git Diff"}
             </Typography>
           </Box>
 
@@ -125,7 +193,7 @@ export function EntryPage() {
             />
             <Stack direction="row" spacing={1}>
               <Button
-                variant={mode === "tree" ? "contained" : "outlined"}
+                variant={contentMode === "tree" ? "contained" : "outlined"}
                 disabled={isAnyLoading || path.trim() === ""}
                 onClick={handleTree}
                 sx={{ minWidth: 80 }}
@@ -133,7 +201,7 @@ export function EntryPage() {
                 {isLoading ? <CircularProgress color="inherit" size={20} /> : "Tree"}
               </Button>
               <Button
-                variant={mode === "diff" ? "contained" : "outlined"}
+                variant={contentMode === "diff" ? "contained" : "outlined"}
                 disabled={isAnyLoading || path.trim() === ""}
                 onClick={handleDiff}
                 sx={{ minWidth: 80 }}
@@ -142,6 +210,30 @@ export function EntryPage() {
               </Button>
             </Stack>
           </Paper>
+
+          {contentMode === "tree" && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Typography
+                sx={{ fontSize: "0.78rem", fontWeight: 700, color: "text.secondary", textTransform: "uppercase" }}
+              >
+                Language
+              </Typography>
+              <ToggleButtonGroup
+                value={langMode}
+                exclusive
+                size="small"
+                onChange={(_, val) => {
+                  if (val !== null) setLangMode(val as LangMode);
+                }}
+              >
+                {(Object.keys(LANG_LABELS) as LangMode[]).map((lang) => (
+                  <ToggleButton key={lang} value={lang} sx={{ px: 1.5, fontSize: "0.75rem", fontWeight: 700 }}>
+                    {LANG_LABELS[lang]}
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
+            </Box>
+          )}
 
           {savedFilePath !== "" && (
             <Alert
@@ -173,40 +265,67 @@ export function EntryPage() {
             >
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 <Typography sx={{ fontWeight: 700 }}>
-                  {mode === "tree" ? "File Tree" : "Git Diff"}
+                  {contentMode === "tree" ? "File Tree" : "Git Diff"}
                 </Typography>
-                {mode === "tree" && <Chip label={entries.length} size="small" />}
-                {mode === "diff" && diffContent !== "" && (
-                  <Chip
-                    label={`${diffLines.filter((l) => l.startsWith("+") && !l.startsWith("+++")).length} additions`}
-                    size="small"
-                    color="success"
-                    variant="outlined"
-                  />
+                {contentMode === "tree" && (
+                  <>
+                    <Chip label={filteredFiles.length} size="small" />
+                    {charCount !== null && (
+                      <Chip
+                        label={`${charCount.toLocaleString()} chars`}
+                        size="small"
+                        variant="outlined"
+                      />
+                    )}
+                  </>
                 )}
-                {mode === "diff" && diffContent !== "" && (
-                  <Chip
-                    label={`${diffLines.filter((l) => l.startsWith("-") && !l.startsWith("---")).length} deletions`}
-                    size="small"
-                    color="error"
-                    variant="outlined"
-                  />
+                {contentMode === "diff" && diffContent !== "" && (
+                  <>
+                    <Chip
+                      label={`+${diffLines.filter((l) => l.startsWith("+") && !l.startsWith("+++")).length}`}
+                      size="small"
+                      color="success"
+                      variant="outlined"
+                    />
+                    <Chip
+                      label={`-${diffLines.filter((l) => l.startsWith("-") && !l.startsWith("---")).length}`}
+                      size="small"
+                      color="error"
+                      variant="outlined"
+                    />
+                  </>
                 )}
               </Stack>
-              <Button
-                variant="outlined"
-                size="small"
-                disabled={scannedPath === "" || isExporting || panelEmpty}
-                onClick={mode === "tree" ? downloadEntries : downloadDiff}
-              >
-                {isExporting ? (
-                  <CircularProgress size={18} />
-                ) : mode === "tree" ? (
-                  "Download Tree"
-                ) : (
-                  "Download Diff"
+              <Stack direction="row" spacing={1}>
+                {contentMode === "tree" && (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    disabled={scannedPath === "" || isExporting || panelEmpty}
+                    onClick={() => downloadSource(filteredFiles)}
+                  >
+                    {isExporting ? <CircularProgress size={18} /> : "Source"}
+                  </Button>
                 )}
-              </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  disabled={scannedPath === "" || isExporting || panelEmpty}
+                  onClick={
+                    contentMode === "tree"
+                      ? () => downloadEntries(filteredEntries)
+                      : downloadDiff
+                  }
+                >
+                  {isExporting ? (
+                    <CircularProgress size={18} />
+                  ) : contentMode === "tree" ? (
+                    "Download Tree"
+                  ) : (
+                    "Download Diff"
+                  )}
+                </Button>
+              </Stack>
             </Stack>
             <Divider />
 
@@ -222,8 +341,8 @@ export function EntryPage() {
                   fontSize: "0.82rem",
                 }}
               >
-                {mode === "tree"
-                  ? entries.map((entry) => {
+                {contentMode === "tree"
+                  ? filteredEntries.map((entry) => {
                       const { depth, name, isDir } = parseTreePath(entry);
                       return (
                         <Box
@@ -259,7 +378,6 @@ export function EntryPage() {
                                 ? "rgba(248,81,73,0.08)"
                                 : "transparent",
                           whiteSpace: "pre",
-                          overflowX: "visible",
                         }}
                       >
                         {line}
@@ -269,7 +387,7 @@ export function EntryPage() {
             ) : (
               <Box sx={{ minHeight: 280, p: 3 }} aria-live="polite">
                 <Typography color="text.secondary">
-                  {mode === "tree" ? "No entries loaded." : "No diff found."}
+                  {contentMode === "tree" ? "No entries loaded." : "No diff found."}
                 </Typography>
               </Box>
             )}

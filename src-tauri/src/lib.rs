@@ -3,8 +3,9 @@ mod commands;
 mod infra;
 
 use commands::{
-    export_diff_command, export_entry_names_command, export_file_tree_command, get_diff_command,
-    get_entry_names_command, get_file_tree_command,
+    count_source_chars_command, export_diff_command, export_entry_names_command,
+    export_file_tree_command, export_filtered_tree_command, export_source_command,
+    get_diff_command, get_entry_names_command, get_file_tree_command,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -18,6 +19,9 @@ pub fn run() {
             export_file_tree_command,
             get_diff_command,
             export_diff_command,
+            export_filtered_tree_command,
+            export_source_command,
+            count_source_chars_command,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

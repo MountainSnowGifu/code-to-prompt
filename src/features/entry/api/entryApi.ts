@@ -32,6 +32,18 @@ export function exportDiff(path: string) {
   return invokeCommand<ExportDiffResponse>("export_diff_command", { path });
 }
 
+export function exportFilteredTree(path: string, paths: string[]) {
+  return invokeCommand<string>("export_filtered_tree_command", { path, paths });
+}
+
+export function exportSource(path: string, paths: string[]) {
+  return invokeCommand<string>("export_source_command", { path, paths });
+}
+
+export function countSourceChars(path: string, paths: string[]) {
+  return invokeCommand<number>("count_source_chars_command", { path, paths });
+}
+
 export function revealEntryNamesFile(path: string) {
   return revealPathInFileManager(path);
 }

@@ -34,6 +34,11 @@ pub fn export_file_tree(path: &str) -> Result<ExportedEntryNames, AppError> {
     })
 }
 
+pub fn export_source(path: &str, file_paths: Vec<String>) -> Result<String, AppError> {
+    let output = infra::write_source_file(path, &file_paths).map_err(AppError::from)?;
+    Ok(output.display().to_string())
+}
+
 pub struct ExportedDiff {
     pub content: String,
     pub output_path: String,

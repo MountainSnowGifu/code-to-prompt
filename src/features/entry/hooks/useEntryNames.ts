@@ -1,7 +1,8 @@
 import { useState } from "react";
 import {
   exportDiff,
-  exportFileTree,
+  exportFilteredTree,
+  exportSource,
   getDiff,
   getFileTree,
   revealEntryNamesFile,
@@ -54,15 +55,29 @@ export function useEntryNames() {
     }
   }
 
-  async function downloadEntries() {
+  async function downloadEntries(paths: string[]) {
     setIsExporting(true);
     setErrorMessage("");
     setSavedFilePath("");
 
     try {
-      const result = await exportFileTree(scannedPath);
-      setEntries(result.entries);
-      setSavedFilePath(result.output_path);
+      const outputPath = await exportFilteredTree(scannedPath, paths);
+      setSavedFilePath(outputPath);
+    } catch (err) {
+      setErrorMessage(toErrorMessage(err));
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  async function downloadSource(paths: string[]) {
+    setIsExporting(true);
+    setErrorMessage("");
+    setSavedFilePath("");
+
+    try {
+      const outputPath = await exportSource(scannedPath, paths);
+      setSavedFilePath(outputPath);
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
     } finally {
@@ -112,6 +127,7 @@ export function useEntryNames() {
     scanEntries,
     fetchDiff,
     downloadEntries,
+    downloadSource,
     downloadDiff,
     openSavedFileFolder,
     clearErrorMessage,
