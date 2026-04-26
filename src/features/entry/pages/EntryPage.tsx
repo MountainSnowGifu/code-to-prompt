@@ -176,26 +176,37 @@ export function EntryPage() {
         minHeight: "100vh",
         py: { xs: 3, sm: 4 },
         background:
-          "linear-gradient(180deg, rgba(83, 132, 145, 0.1), transparent 280px), #f4f7f8",
+          "radial-gradient(circle at 50% 0%, rgba(57, 255, 136, 0.08), transparent 360px), #050607",
       }}
     >
       <Container maxWidth="md">
         <Stack spacing={3}>
-          <Box component="header">
+          <Box
+            component="header"
+            sx={{
+              borderLeft: "2px solid",
+              borderColor: "primary.main",
+              pl: 2,
+            }}
+          >
             <Typography
               component="p"
               sx={{
                 mb: 1,
-                color: "text.secondary",
-                fontSize: "0.78rem",
+                color: "primary.main",
+                fontSize: "0.76rem",
                 fontWeight: 700,
                 textTransform: "uppercase",
               }}
             >
-              Code to Prompt
+              $ code-to-prompt
             </Typography>
-            <Typography component="h1" variant="h3" sx={{ fontWeight: 800 }}>
-              {contentMode === "tree" ? "コードをプロンプトへ" : "差分をプロンプトへ"}
+            <Typography
+              component="h1"
+              variant="h4"
+              sx={{ color: "text.primary", fontWeight: 800 }}
+            >
+              {contentMode === "tree" ? "Code to Prompt" : "Diff to Prompt"}
             </Typography>
           </Box>
 
@@ -208,11 +219,12 @@ export function EntryPage() {
               p: 2,
               border: "1px solid",
               borderColor: "divider",
+              bgcolor: "background.paper",
             }}
           >
             <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
               <TextField
-                label="フォルダパス"
+                label="$ path"
                 value={path}
                 onChange={(e) => setPath(e.currentTarget.value)}
                 placeholder="/path/to/your/project"
@@ -225,8 +237,12 @@ export function EntryPage() {
                   }
                 }}
               />
-              <Tooltip title="フォルダを選択">
-                <IconButton onClick={handlePickFolder} size="small">
+              <Tooltip title="Choose folder">
+                <IconButton
+                  onClick={handlePickFolder}
+                  size="small"
+                  sx={{ color: "primary.main", border: "1px solid", borderColor: "divider" }}
+                >
                   <FolderOpenIcon />
                 </IconButton>
               </Tooltip>
@@ -238,7 +254,7 @@ export function EntryPage() {
                 onClick={handleTree}
                 sx={{ minWidth: 80 }}
               >
-                {isLoading ? <CircularProgress color="inherit" size={20} /> : "コード"}
+                {isLoading ? <CircularProgress color="inherit" size={20} /> : "Code"}
               </Button>
               <Button
                 variant={contentMode === "diff" ? "contained" : "outlined"}
@@ -246,7 +262,7 @@ export function EntryPage() {
                 onClick={handleDiff}
                 sx={{ minWidth: 80 }}
               >
-                {isDiffLoading ? <CircularProgress color="inherit" size={20} /> : "差分"}
+                {isDiffLoading ? <CircularProgress color="inherit" size={20} /> : "Diff"}
               </Button>
             </Stack>
           </Paper>
@@ -256,7 +272,7 @@ export function EntryPage() {
               <Typography
                 sx={{ fontSize: "0.78rem", fontWeight: 700, color: "text.secondary", textTransform: "uppercase" }}
               >
-                言語
+                Lang
               </Typography>
               <ToggleButtonGroup
                 value={langMode}
@@ -287,15 +303,15 @@ export function EntryPage() {
               variant="outlined"
               action={
                 <Button color="inherit" size="small" onClick={openSavedFileFolder}>
-                  フォルダを開く
+                  Open folder
                 </Button>
               }
             >
               {savedFilePaths.length === 1 ? (
-                <>{savedFilePaths[0]} に保存しました</>
+                <>Saved to {savedFilePaths[0]}</>
               ) : (
                 <>
-                  {savedFilePaths.length} 件のファイルを保存しました
+                  Saved {savedFilePaths.length} files
                   {savedFilePaths.map((p, i) => (
                     <Box key={p} sx={{ fontSize: "0.78rem", mt: 0.25 }}>
                       {i + 1}. {p}
@@ -305,7 +321,7 @@ export function EntryPage() {
               )}
               {skippedSourcePaths.length > 0 && (
                 <Box sx={{ mt: 1, fontSize: "0.78rem" }}>
-                  読み込めなかったファイルを {skippedSourcePaths.length} 件スキップしました
+                  Skipped {skippedSourcePaths.length} unreadable files
                   {skippedSourcePaths.slice(0, 5).map((p) => (
                     <Box key={p} sx={{ mt: 0.25 }}>
                       {p}
@@ -313,7 +329,7 @@ export function EntryPage() {
                   ))}
                   {skippedSourcePaths.length > 5 && (
                     <Box sx={{ mt: 0.25 }}>
-                      ほか {skippedSourcePaths.length - 5} 件
+                      and {skippedSourcePaths.length - 5} more
                     </Box>
                   )}
                 </Box>
@@ -323,7 +339,12 @@ export function EntryPage() {
 
           <Paper
             elevation={0}
-            sx={{ border: "1px solid", borderColor: "divider", overflow: "hidden" }}
+            sx={{
+              border: "1px solid",
+              borderColor: "divider",
+              bgcolor: "background.paper",
+              overflow: "hidden",
+            }}
           >
             <Stack
               direction="row"
@@ -337,14 +358,14 @@ export function EntryPage() {
             >
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 <Typography sx={{ fontWeight: 700 }}>
-                  {contentMode === "tree" ? "プロンプト素材" : "差分素材"}
+                  {contentMode === "tree" ? "$ prompt-source" : "$ diff-source"}
                 </Typography>
                 {contentMode === "tree" && (
                   <>
                     <Chip label={filteredFiles.length} size="small" />
                     {charCount !== null && (
                       <Chip
-                        label={`${charCount.toLocaleString()} 文字`}
+                        label={`${charCount.toLocaleString()} chars`}
                         size="small"
                         variant="outlined"
                       />
@@ -369,7 +390,7 @@ export function EntryPage() {
                 )}
               </Stack>
               <Stack direction="row" spacing={1}>
-                <Tooltip title="内容をクリップボードにコピー">
+                <Tooltip title="Copy content to clipboard">
                   <span>
                     <Button
                       variant={isCopied ? "contained" : "outlined"}
@@ -379,12 +400,12 @@ export function EntryPage() {
                       onClick={handleCopyContent}
                       sx={{ minWidth: 80 }}
                     >
-                      {isCopied ? "コピー済 ✓" : "コピー"}
+                      {isCopied ? "Copied ✓" : "Copy"}
                     </Button>
                   </span>
                 </Tooltip>
                 {contentMode === "tree" && (
-                  <Tooltip title="各ファイルのソースコードをエクスポート">
+                  <Tooltip title="Export source code for each file">
                     <span>
                       <Button
                         variant="outlined"
@@ -392,7 +413,7 @@ export function EntryPage() {
                         disabled={scannedPath === "" || isExporting || panelEmpty}
                         onClick={() => downloadSource(filteredFiles)}
                       >
-                        {isExporting ? <CircularProgress size={18} /> : "ソース出力"}
+                        {isExporting ? <CircularProgress size={18} /> : "Export source"}
                       </Button>
                     </span>
                   </Tooltip>
@@ -400,8 +421,8 @@ export function EntryPage() {
                 <Tooltip
                   title={
                     contentMode === "tree"
-                      ? "プロンプト用のコードパス一覧をテキストでエクスポート"
-                      : "Git 差分をテキストでエクスポート"
+                      ? "Export prompt-ready code paths as text"
+                      : "Export Git diff as text"
                   }
                 >
                   <span>
@@ -418,9 +439,9 @@ export function EntryPage() {
                       {isExporting ? (
                         <CircularProgress size={18} />
                       ) : contentMode === "tree" ? (
-                        "ツリー出力"
+                        "Export tree"
                       ) : (
-                        "差分出力"
+                        "Export diff"
                       )}
                     </Button>
                   </span>
@@ -437,7 +458,8 @@ export function EntryPage() {
                   minHeight: 280,
                   overflow: "auto",
                   py: 1,
-                  fontFamily: "monospace",
+                  bgcolor: "#030505",
+                  fontFamily: "inherit",
                   fontSize: "0.82rem",
                 }}
               >
@@ -453,13 +475,13 @@ export function EntryPage() {
                             py: "2px",
                             color: isDir ? "primary.main" : "text.primary",
                             fontWeight: isDir ? 600 : 400,
-                            "&:hover": { bgcolor: "action.hover" },
+                            "&:hover": { bgcolor: "rgba(57, 255, 136, 0.08)" },
                             whiteSpace: "nowrap",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                           }}
                         >
-                          {isDir ? "📁 " : "📄 "}
+                          {isDir ? "./" : "> "}
                           {name}
                         </Box>
                       );
@@ -475,7 +497,7 @@ export function EntryPage() {
                             line.startsWith("+") && !line.startsWith("+++")
                               ? "rgba(46,160,67,0.08)"
                               : line.startsWith("-") && !line.startsWith("---")
-                                ? "rgba(248,81,73,0.08)"
+                                ? "rgba(255,95,122,0.08)"
                                 : "transparent",
                           whiteSpace: "pre",
                         }}
@@ -488,12 +510,12 @@ export function EntryPage() {
               <Box sx={{ minHeight: 280, p: 3 }} aria-live="polite">
                 <Typography color="text.secondary">
                   {isFilteredEmpty
-                    ? `「${LANG_LABELS[langMode]}」に一致するファイルがありません`
+                    ? `No files match ${LANG_LABELS[langMode]}`
                     : isInitialEmpty
-                      ? "プロンプト化したいコードフォルダを選択して取得してください"
+                      ? "Choose a code folder, then fetch prompt material"
                       : contentMode === "tree"
-                        ? "プロンプトにできるコードがありません"
-                        : "差分がありません"}
+                        ? "No prompt-ready code found"
+                        : "No diff found"}
                 </Typography>
               </Box>
             )}

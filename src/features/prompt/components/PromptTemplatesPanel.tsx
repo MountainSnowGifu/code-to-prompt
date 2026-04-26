@@ -47,7 +47,7 @@ export function PromptTemplatesPanel() {
 
   function handleAdd() {
     setEditingId(NEW_TEMPLATE_ID);
-    setDraft({ title: "新しいテンプレート", body: "" });
+    setDraft({ title: "New template", body: "" });
   }
 
   function handleDelete(t: PromptTemplate) {
@@ -71,13 +71,20 @@ export function PromptTemplatesPanel() {
     <>
       <Paper
         elevation={0}
-        sx={{ border: "1px solid", borderColor: "divider", overflow: "hidden" }}
+        sx={{
+          border: "1px solid",
+          borderColor: "divider",
+          bgcolor: "background.paper",
+          overflow: "hidden",
+        }}
       >
         <Stack
           direction="row"
           sx={{ alignItems: "center", justifyContent: "space-between", px: 2, py: 1.5 }}
         >
-          <Typography sx={{ fontWeight: 700 }}>プロンプトテンプレート</Typography>
+          <Typography sx={{ fontWeight: 700, color: "primary.main" }}>
+            $ templates
+          </Typography>
           <Stack direction="row" spacing={1}>
             {confirmReset ? (
               <>
@@ -91,19 +98,19 @@ export function PromptTemplatesPanel() {
                     setEditingId(null);
                   }}
                 >
-                  リセット確認
+                  Confirm reset
                 </Button>
                 <Button size="small" onClick={() => setConfirmReset(false)}>
-                  キャンセル
+                  Cancel
                 </Button>
               </>
             ) : (
               <Button size="small" color="inherit" onClick={() => setConfirmReset(true)}>
-                リセット
+                Reset
               </Button>
             )}
             <Button size="small" variant="outlined" onClick={handleAdd}>
-              + 追加
+              + Add
             </Button>
           </Stack>
         </Stack>
@@ -152,12 +159,12 @@ export function PromptTemplatesPanel() {
           variant="filled"
           action={
             <Button color="inherit" size="small" onClick={handleUndoDelete}>
-              元に戻す
+              Undo
             </Button>
           }
           onClose={() => setUndoDelete(null)}
         >
-          テンプレートを削除しました
+          Template deleted
         </Alert>
       </Snackbar>
     </>
@@ -174,10 +181,10 @@ type ViewCardProps = {
 
 function ViewCard({ template, copied, onCopy, onEdit, onDelete }: ViewCardProps) {
   return (
-    <Box sx={{ px: 2, py: 1.5 }}>
+    <Box sx={{ px: 2, py: 1.5, "&:hover": { bgcolor: "rgba(57, 255, 136, 0.06)" } }}>
       <Stack direction="row" sx={{ alignItems: "flex-start", justifyContent: "space-between", gap: 1 }}>
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography sx={{ fontWeight: 600, fontSize: "0.9rem", mb: 0.25 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: "0.9rem", mb: 0.25 }}>
             {template.title}
           </Typography>
           <Typography
@@ -202,14 +209,14 @@ function ViewCard({ template, copied, onCopy, onEdit, onDelete }: ViewCardProps)
             onClick={onCopy}
             sx={{ minWidth: 72, fontSize: "0.75rem" }}
           >
-            {copied ? "コピー済 ✓" : "コピー"}
+            {copied ? "Copied ✓" : "Copy"}
           </Button>
-          <Tooltip title="編集">
+          <Tooltip title="Edit">
             <IconButton size="small" onClick={onEdit}>
               <EditIcon />
             </IconButton>
           </Tooltip>
-          <Tooltip title="削除">
+          <Tooltip title="Delete">
             <IconButton size="small" color="error" onClick={onDelete}>
               <DeleteIcon />
             </IconButton>
@@ -229,10 +236,10 @@ type EditCardProps = {
 
 function EditCard({ draft, onChange, onSave, onCancel }: EditCardProps) {
   return (
-    <Box sx={{ px: 2, py: 1.5 }}>
+    <Box sx={{ px: 2, py: 1.5, bgcolor: "rgba(57, 255, 136, 0.04)" }}>
       <Stack spacing={1.5}>
         <TextField
-          label="タイトル"
+          label="Title"
           size="small"
           value={draft.title}
           onChange={(e) => onChange({ ...draft, title: e.target.value })}
@@ -240,7 +247,7 @@ function EditCard({ draft, onChange, onSave, onCancel }: EditCardProps) {
           autoFocus
         />
         <TextField
-          label="テンプレート本文"
+          label="Template body"
           size="small"
           value={draft.body}
           onChange={(e) => onChange({ ...draft, body: e.target.value })}
@@ -257,10 +264,10 @@ function EditCard({ draft, onChange, onSave, onCancel }: EditCardProps) {
         />
         <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
           <Button size="small" onClick={onCancel}>
-            キャンセル
+            Cancel
           </Button>
           <Button size="small" variant="contained" onClick={onSave} disabled={!draft.title.trim()}>
-            保存
+            Save
           </Button>
         </Stack>
       </Stack>

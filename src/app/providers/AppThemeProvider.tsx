@@ -3,25 +3,70 @@ import type { ReactNode } from "react";
 
 const theme = createTheme({
   palette: {
-    mode: "light",
+    mode: "dark",
     primary: {
-      main: "#1f6f78",
+      main: "#39ff88",
+    },
+    success: {
+      main: "#39ff88",
+    },
+    error: {
+      main: "#ff5f7a",
+    },
+    info: {
+      main: "#65d8ff",
     },
     background: {
-      default: "#f4f7f8",
-      paper: "#ffffff",
+      default: "#050607",
+      paper: "#0b0f10",
     },
     text: {
-      primary: "#17212b",
-      secondary: "#587078",
+      primary: "#d8ffe6",
+      secondary: "#7f9b8d",
     },
+    divider: "rgba(57, 255, 136, 0.22)",
   },
   shape: {
-    borderRadius: 8,
+    borderRadius: 6,
   },
   typography: {
     fontFamily:
-      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      '"JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
+  },
+  components: {
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: "none",
+          boxShadow: "0 0 0 1px rgba(57, 255, 136, 0.08)",
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: "none",
+          fontWeight: 700,
+          borderRadius: 4,
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          borderRadius: 4,
+          backgroundColor: "#060909",
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          borderRadius: 4,
+          fontWeight: 700,
+        },
+      },
+    },
   },
 });
 

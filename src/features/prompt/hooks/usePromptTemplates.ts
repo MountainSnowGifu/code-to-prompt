@@ -27,7 +27,7 @@ export function usePromptTemplates() {
   function addTemplate(data?: { title: string; body: string }) {
     const newTemplate: PromptTemplate = {
       id: crypto.randomUUID(),
-      title: data?.title ?? "新しいテンプレート",
+      title: data?.title ?? "New template",
       body: data?.body ?? "",
     };
     update([newTemplate, ...templates]);
