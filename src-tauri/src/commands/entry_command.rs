@@ -13,6 +13,12 @@ pub struct ExportDiffResponse {
     output_path: String,
 }
 
+#[derive(serde::Serialize)]
+pub struct ExportSourceResponse {
+    output_paths: Vec<String>,
+    skipped_paths: Vec<String>,
+}
+
 #[tauri::command]
 pub fn get_diff_command(path: &str) -> Result<String, String> {
     eprintln!("[get_diff_command] called: path={path:?}");
@@ -57,19 +63,26 @@ pub fn count_source_chars_command(path: &str, paths: Vec<String>) -> usize {
 }
 
 #[tauri::command]
-pub fn export_source_command(path: &str, paths: Vec<String>) -> Result<Vec<String>, String> {
+pub fn export_source_command(
+    path: &str,
+    paths: Vec<String>,
+) -> Result<ExportSourceResponse, String> {
     eprintln!(
         "[export_source_command] called: path={path:?}, {} files",
         paths.len()
     );
 
     match app::export_source(path, paths) {
-        Ok(output_paths) => {
+        Ok(result) => {
             eprintln!(
-                "[export_source_command] success: {} file(s) exported",
-                output_paths.len()
+                "[export_source_command] success: {} file(s) exported, {} skipped",
+                result.output_paths.len(),
+                result.skipped_paths.len()
             );
-            Ok(output_paths)
+            Ok(ExportSourceResponse {
+                output_paths: result.output_paths,
+                skipped_paths: result.skipped_paths,
+            })
         }
         Err(err) => {
             eprintln!("[export_source_command] error: {err}");
@@ -79,10 +92,7 @@ pub fn export_source_command(path: &str, paths: Vec<String>) -> Result<Vec<Strin
 }
 
 #[tauri::command]
-pub fn export_filtered_tree_command(
-    path: &str,
-    paths: Vec<String>,
-) -> Result<String, String> {
+pub fn export_filtered_tree_command(path: &str, paths: Vec<String>) -> Result<String, String> {
     eprintln!(
         "[export_filtered_tree_command] called: path={path:?}, {} paths",
         paths.len()

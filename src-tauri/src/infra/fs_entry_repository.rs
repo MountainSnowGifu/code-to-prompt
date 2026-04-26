@@ -18,7 +18,11 @@ struct TreeNode {
 
 impl TreeNode {
     fn new(name: &str, is_dir: bool) -> Self {
-        Self { name: name.to_string(), is_dir, children: Vec::new() }
+        Self {
+            name: name.to_string(),
+            is_dir,
+            children: Vec::new(),
+        }
     }
 
     fn add_path(&mut self, parts: &[&str], is_dir: bool) {
@@ -145,13 +149,13 @@ impl fmt::Display for EntryRepositoryError {
     }
 }
 
-pub fn get_file_tree<P: AsRef<Path>>(
-    folder_path: P,
-) -> Result<Vec<String>, EntryRepositoryError> {
+pub fn get_file_tree<P: AsRef<Path>>(folder_path: P) -> Result<Vec<String>, EntryRepositoryError> {
     let folder_path = folder_path.as_ref();
 
     if !folder_path.is_dir() {
-        return Err(EntryRepositoryError::NotDirectory(folder_path.to_path_buf()));
+        return Err(EntryRepositoryError::NotDirectory(
+            folder_path.to_path_buf(),
+        ));
     }
 
     let output = Command::new("git")
@@ -231,16 +235,24 @@ fn build_file_tree_text(folder_path: &Path, tree_paths: &[String]) -> String {
         render_ascii_tree(child, "", i == root.children.len() - 1, &mut out);
     }
     out.push('\n');
-    out.push_str(&format!("{} directories, {} files\n", dir_count, file_count));
+    out.push_str(&format!(
+        "{} directories, {} files\n",
+        dir_count, file_count
+    ));
     out
 }
 
 const SOURCE_CHUNK_CHARS: usize = 30_000;
 
+pub struct SourceExportResult {
+    pub output_paths: Vec<PathBuf>,
+    pub skipped_paths: Vec<String>,
+}
+
 pub fn write_source_file<P: AsRef<Path>>(
     folder_path: P,
     file_paths: &[String],
-) -> Result<Vec<PathBuf>, EntryRepositoryError> {
+) -> Result<SourceExportResult, EntryRepositoryError> {
     let folder_path = folder_path.as_ref();
     let folder_name = folder_path
         .file_name()
@@ -256,7 +268,7 @@ pub fn write_source_file<P: AsRef<Path>>(
         }
     })?;
 
-    let chunks = build_source_chunks(folder_path, file_paths);
+    let (chunks, skipped_paths) = build_source_chunks(folder_path, file_paths);
     let ts = now_str();
     let base = sanitize_file_name(folder_name);
     let mut output_paths = Vec::new();
@@ -275,12 +287,16 @@ pub fn write_source_file<P: AsRef<Path>>(
         output_paths.push(output_path);
     }
 
-    Ok(output_paths)
+    Ok(SourceExportResult {
+        output_paths,
+        skipped_paths,
+    })
 }
 
-fn build_source_chunks(folder_path: &Path, file_paths: &[String]) -> Vec<String> {
+fn build_source_chunks(folder_path: &Path, file_paths: &[String]) -> (Vec<String>, Vec<String>) {
     let mut chunks: Vec<String> = Vec::new();
     let mut current = String::new();
+    let mut skipped_paths = Vec::new();
 
     for rel_path in file_paths {
         if rel_path.ends_with('/') {
@@ -289,7 +305,10 @@ fn build_source_chunks(folder_path: &Path, file_paths: &[String]) -> Vec<String>
         let full_path = folder_path.join(rel_path);
         let content = match fs::read_to_string(&full_path) {
             Ok(c) => c,
-            Err(_) => continue,
+            Err(_) => {
+                skipped_paths.push(rel_path.clone());
+                continue;
+            }
         };
 
         let mut entry = format!("=== {} ===\n", rel_path);
@@ -317,7 +336,7 @@ fn build_source_chunks(folder_path: &Path, file_paths: &[String]) -> Vec<String>
         chunks.push(String::new());
     }
 
-    chunks
+    (chunks, skipped_paths)
 }
 
 pub fn count_source_chars<P: AsRef<Path>>(folder_path: P, file_paths: &[String]) -> usize {
@@ -335,13 +354,13 @@ pub fn count_source_chars<P: AsRef<Path>>(folder_path: P, file_paths: &[String])
     total
 }
 
-pub fn get_git_diff<P: AsRef<Path>>(
-    folder_path: P,
-) -> Result<String, EntryRepositoryError> {
+pub fn get_git_diff<P: AsRef<Path>>(folder_path: P) -> Result<String, EntryRepositoryError> {
     let folder_path = folder_path.as_ref();
 
     if !folder_path.is_dir() {
-        return Err(EntryRepositoryError::NotDirectory(folder_path.to_path_buf()));
+        return Err(EntryRepositoryError::NotDirectory(
+            folder_path.to_path_buf(),
+        ));
     }
 
     let output = Command::new("git")
@@ -436,7 +455,11 @@ pub fn write_entry_names_file<P: AsRef<Path>>(
         .and_then(|name| name.to_str())
         .filter(|name| !name.is_empty())
         .unwrap_or("entries");
-    let file_name = format!("{}-entries-{}.txt", sanitize_file_name(folder_name), now_str());
+    let file_name = format!(
+        "{}-entries-{}.txt",
+        sanitize_file_name(folder_name),
+        now_str()
+    );
     let output_dir = downloads_dir()?;
     fs::create_dir_all(&output_dir).map_err(|err| {
         EntryRepositoryError::CreateDownloadsDirectoryFailed {

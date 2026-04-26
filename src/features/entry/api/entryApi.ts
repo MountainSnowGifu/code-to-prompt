@@ -1,5 +1,9 @@
 import { invokeCommand, revealPathInFileManager } from "../../../shared/lib/tauri";
-import type { ExportDiffResponse, ExportEntryNamesResponse } from "../types/entry";
+import type {
+  ExportDiffResponse,
+  ExportEntryNamesResponse,
+  ExportSourceResponse,
+} from "../types/entry";
 
 const GET_ENTRY_NAMES_COMMAND = "get_entry_names_command";
 const EXPORT_ENTRY_NAMES_COMMAND = "export_entry_names_command";
@@ -37,7 +41,7 @@ export function exportFilteredTree(path: string, paths: string[]) {
 }
 
 export function exportSource(path: string, paths: string[]) {
-  return invokeCommand<string[]>("export_source_command", { path, paths });
+  return invokeCommand<ExportSourceResponse>("export_source_command", { path, paths });
 }
 
 export function countSourceChars(path: string, paths: string[]) {

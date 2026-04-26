@@ -7,3 +7,8 @@ export type ExportDiffResponse = {
   content: string;
   output_path: string;
 };
+
+export type ExportSourceResponse = {
+  output_paths: string[];
+  skipped_paths: string[];
+};

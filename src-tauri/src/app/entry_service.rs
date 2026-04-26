@@ -34,9 +34,21 @@ pub fn export_file_tree(path: &str) -> Result<ExportedEntryNames, AppError> {
     })
 }
 
-pub fn export_source(path: &str, file_paths: Vec<String>) -> Result<Vec<String>, AppError> {
-    let outputs = infra::write_source_file(path, &file_paths).map_err(AppError::from)?;
-    Ok(outputs.iter().map(|p| p.display().to_string()).collect())
+pub struct ExportedSource {
+    pub output_paths: Vec<String>,
+    pub skipped_paths: Vec<String>,
+}
+
+pub fn export_source(path: &str, file_paths: Vec<String>) -> Result<ExportedSource, AppError> {
+    let result = infra::write_source_file(path, &file_paths).map_err(AppError::from)?;
+    Ok(ExportedSource {
+        output_paths: result
+            .output_paths
+            .iter()
+            .map(|p| p.display().to_string())
+            .collect(),
+        skipped_paths: result.skipped_paths,
+    })
 }
 
 pub struct ExportedDiff {

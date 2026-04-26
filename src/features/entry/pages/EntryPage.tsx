@@ -102,6 +102,7 @@ export function EntryPage() {
     entries,
     diffContent,
     savedFilePaths,
+    skippedSourcePaths,
     isLoading,
     isDiffLoading,
     isExporting,
@@ -140,6 +141,7 @@ export function EntryPage() {
   const isAnyLoading = isLoading || isDiffLoading;
   const panelEmpty =
     contentMode === "tree" ? filteredEntries.length === 0 : diffContent === "";
+  const isInitialEmpty = scannedPath === "";
   const isFilteredEmpty =
     contentMode === "tree" && entries.length > 0 && filteredEntries.length === 0;
 
@@ -193,7 +195,7 @@ export function EntryPage() {
               Code to Prompt
             </Typography>
             <Typography component="h1" variant="h3" sx={{ fontWeight: 800 }}>
-              {contentMode === "tree" ? "ファイルツリー" : "Git 差分"}
+              {contentMode === "tree" ? "コードをプロンプトへ" : "差分をプロンプトへ"}
             </Typography>
           </Box>
 
@@ -236,7 +238,7 @@ export function EntryPage() {
                 onClick={handleTree}
                 sx={{ minWidth: 80 }}
               >
-                {isLoading ? <CircularProgress color="inherit" size={20} /> : "ツリー"}
+                {isLoading ? <CircularProgress color="inherit" size={20} /> : "コード"}
               </Button>
               <Button
                 variant={contentMode === "diff" ? "contained" : "outlined"}
@@ -301,6 +303,21 @@ export function EntryPage() {
                   ))}
                 </>
               )}
+              {skippedSourcePaths.length > 0 && (
+                <Box sx={{ mt: 1, fontSize: "0.78rem" }}>
+                  読み込めなかったファイルを {skippedSourcePaths.length} 件スキップしました
+                  {skippedSourcePaths.slice(0, 5).map((p) => (
+                    <Box key={p} sx={{ mt: 0.25 }}>
+                      {p}
+                    </Box>
+                  ))}
+                  {skippedSourcePaths.length > 5 && (
+                    <Box sx={{ mt: 0.25 }}>
+                      ほか {skippedSourcePaths.length - 5} 件
+                    </Box>
+                  )}
+                </Box>
+              )}
             </Alert>
           )}
 
@@ -320,7 +337,7 @@ export function EntryPage() {
             >
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 <Typography sx={{ fontWeight: 700 }}>
-                  {contentMode === "tree" ? "ファイルツリー" : "Git 差分"}
+                  {contentMode === "tree" ? "プロンプト素材" : "差分素材"}
                 </Typography>
                 {contentMode === "tree" && (
                   <>
@@ -383,7 +400,7 @@ export function EntryPage() {
                 <Tooltip
                   title={
                     contentMode === "tree"
-                      ? "ファイルパス一覧をテキストでエクスポート"
+                      ? "プロンプト用のコードパス一覧をテキストでエクスポート"
                       : "Git 差分をテキストでエクスポート"
                   }
                 >
@@ -472,9 +489,11 @@ export function EntryPage() {
                 <Typography color="text.secondary">
                   {isFilteredEmpty
                     ? `「${LANG_LABELS[langMode]}」に一致するファイルがありません`
-                    : contentMode === "tree"
-                      ? "エントリがありません"
-                      : "差分がありません"}
+                    : isInitialEmpty
+                      ? "プロンプト化したいコードフォルダを選択して取得してください"
+                      : contentMode === "tree"
+                        ? "プロンプトにできるコードがありません"
+                        : "差分がありません"}
                 </Typography>
               </Box>
             )}

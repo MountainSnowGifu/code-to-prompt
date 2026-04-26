@@ -18,15 +18,27 @@ export function useEntryNames() {
   const [entries, setEntries] = useState<string[]>([]);
   const [diffContent, setDiffContent] = useState("");
   const [savedFilePaths, setSavedFilePaths] = useState<string[]>([]);
+  const [skippedSourcePaths, setSkippedSourcePaths] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDiffLoading, setIsDiffLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  function updatePath(nextPath: string) {
+    setPath(nextPath);
+    setScannedPath("");
+    setEntries([]);
+    setDiffContent("");
+    setSavedFilePaths([]);
+    setSkippedSourcePaths([]);
+    setErrorMessage("");
+  }
+
   async function scanEntries() {
     setIsLoading(true);
     setErrorMessage("");
     setSavedFilePaths([]);
+    setSkippedSourcePaths([]);
 
     try {
       const tree = await getFileTree(path);
@@ -43,6 +55,7 @@ export function useEntryNames() {
     setIsDiffLoading(true);
     setErrorMessage("");
     setSavedFilePaths([]);
+    setSkippedSourcePaths([]);
 
     try {
       const diff = await getDiff(path);
@@ -59,6 +72,7 @@ export function useEntryNames() {
     setIsExporting(true);
     setErrorMessage("");
     setSavedFilePaths([]);
+    setSkippedSourcePaths([]);
 
     try {
       const outputPath = await exportFilteredTree(scannedPath, paths);
@@ -74,10 +88,12 @@ export function useEntryNames() {
     setIsExporting(true);
     setErrorMessage("");
     setSavedFilePaths([]);
+    setSkippedSourcePaths([]);
 
     try {
-      const outputPaths = await exportSource(scannedPath, paths);
-      setSavedFilePaths(outputPaths);
+      const result = await exportSource(scannedPath, paths);
+      setSavedFilePaths(result.output_paths);
+      setSkippedSourcePaths(result.skipped_paths);
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
     } finally {
@@ -89,6 +105,7 @@ export function useEntryNames() {
     setIsExporting(true);
     setErrorMessage("");
     setSavedFilePaths([]);
+    setSkippedSourcePaths([]);
 
     try {
       const result = await exportDiff(scannedPath);
@@ -116,11 +133,12 @@ export function useEntryNames() {
 
   return {
     path,
-    setPath,
+    setPath: updatePath,
     scannedPath,
     entries,
     diffContent,
     savedFilePaths,
+    skippedSourcePaths,
     isLoading,
     isDiffLoading,
     isExporting,
