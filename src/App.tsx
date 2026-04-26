@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -12,6 +14,7 @@ import {
   ListItem,
   ListItemText,
   Paper,
+  Snackbar,
   Stack,
   TextField,
   ThemeProvider,
@@ -44,21 +47,64 @@ const theme = createTheme({
   },
 });
 
+type ExportEntryNamesResponse = {
+  entries: string[];
+  output_path: string;
+};
+
 function App() {
   const [path, setPath] = useState("");
+  const [scannedPath, setScannedPath] = useState("");
   const [entries, setEntries] = useState<string[]>([]);
+  const [savedFilePath, setSavedFilePath] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function loadEntries() {
     setIsLoading(true);
+    setErrorMessage("");
+    setSavedFilePath("");
 
     try {
       const entryNames = await invoke<string[]>("get_entry_names_command", {
         path,
       });
       setEntries(entryNames);
+      setScannedPath(path);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setErrorMessage(message);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function exportEntries() {
+    setIsExporting(true);
+    setErrorMessage("");
+    setSavedFilePath("");
+
+    try {
+      const result = await invoke<ExportEntryNamesResponse>("export_entry_names_command", {
+        path: scannedPath,
+      });
+      setEntries(result.entries);
+      setSavedFilePath(result.output_path);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setErrorMessage(message);
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  async function openDownloadFolder() {
+    try {
+      await revealItemInDir(savedFilePath);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setErrorMessage(message);
     }
   }
 
@@ -128,6 +174,20 @@ function App() {
               </Button>
             </Paper>
 
+            {savedFilePath !== "" && (
+              <Alert
+                severity="success"
+                variant="outlined"
+                action={
+                  <Button color="inherit" size="small" onClick={openDownloadFolder}>
+                    Open Folder
+                  </Button>
+                }
+              >
+                Saved to {savedFilePath}
+              </Alert>
+            )}
+
             <Paper
               elevation={0}
               sx={{
@@ -141,12 +201,23 @@ function App() {
                 sx={{
                   alignItems: "center",
                   justifyContent: "space-between",
+                  gap: 2,
                   px: 2,
                   py: 1.5,
                 }}
               >
-                <Typography sx={{ fontWeight: 700 }}>Entries</Typography>
-                <Chip label={entries.length} size="small" />
+                <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                  <Typography sx={{ fontWeight: 700 }}>Entries</Typography>
+                  <Chip label={entries.length} size="small" />
+                </Stack>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  disabled={scannedPath === "" || isExporting}
+                  onClick={exportEntries}
+                >
+                  {isExporting ? <CircularProgress size={18} /> : "Download Text"}
+                </Button>
               </Stack>
               <Divider />
 
@@ -182,6 +253,15 @@ function App() {
             </Paper>
           </Stack>
         </Container>
+        <Snackbar
+          open={errorMessage !== ""}
+          autoHideDuration={5000}
+          onClose={() => setErrorMessage("")}
+        >
+          <Alert severity="error" variant="filled" onClose={() => setErrorMessage("")}>
+            {errorMessage}
+          </Alert>
+        </Snackbar>
       </Box>
     </ThemeProvider>
   );

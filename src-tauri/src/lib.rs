@@ -2,13 +2,16 @@ mod app;
 mod commands;
 mod infra;
 
-use commands::get_entry_names_command;
+use commands::{export_entry_names_command, get_entry_names_command};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![get_entry_names_command])
+        .invoke_handler(tauri::generate_handler![
+            get_entry_names_command,
+            export_entry_names_command
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
