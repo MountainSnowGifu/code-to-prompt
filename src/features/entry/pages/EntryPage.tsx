@@ -116,6 +116,7 @@ export function EntryPage() {
     downloadDiff,
     openSavedFileFolder,
     clearErrorMessage,
+    showErrorMessage,
   } = useEntryNames();
 
   const filteredEntries = useMemo(
@@ -130,16 +131,28 @@ export function EntryPage() {
   const [charCount, setCharCount] = useState<number | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     if (!scannedPath || filteredFiles.length === 0) {
       setCharCount(null);
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
     countSourceChars(scannedPath, filteredFiles)
-      .then(setCharCount)
-      .catch(() => setCharCount(null));
+      .then((count) => {
+        if (!cancelled) setCharCount(count);
+      })
+      .catch(() => {
+        if (!cancelled) setCharCount(null);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [scannedPath, filteredFiles]);
 
   const diffLines = diffContent.split("\n");
+  const estimatedTokens =
+    charCount === null ? null : Math.max(1, Math.ceil(charCount / 4));
   const isAnyLoading = isLoading || isDiffLoading;
   const panelEmpty =
     contentMode === "tree" ? filteredEntries.length === 0 : diffContent === "";
@@ -166,9 +179,13 @@ export function EntryPage() {
   async function handleCopyContent() {
     const text =
       contentMode === "tree" ? filteredEntries.join("\n") : diffContent;
-    await navigator.clipboard.writeText(text);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(text);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch {
+      showErrorMessage("Failed to copy content to clipboard.");
+    }
   }
 
   return (
@@ -366,11 +383,18 @@ export function EntryPage() {
                   <>
                     <Chip label={filteredFiles.length} size="small" />
                     {charCount !== null && (
-                      <Chip
-                        label={`${charCount.toLocaleString()} chars`}
-                        size="small"
-                        variant="outlined"
-                      />
+                      <>
+                        <Chip
+                          label={`${charCount.toLocaleString()} chars`}
+                          size="small"
+                          variant="outlined"
+                        />
+                        <Chip
+                          label={`~${estimatedTokens?.toLocaleString()} tokens`}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </>
                     )}
                   </>
                 )}

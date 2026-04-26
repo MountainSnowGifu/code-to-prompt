@@ -1,2 +1,5 @@
 npm install
 npm run tauri dev
+
+インストーラーなし（バイナリのみ、速い）
+npm run tauri build -- --no-bundle

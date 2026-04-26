@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   exportDiff,
   exportFilteredTree,
@@ -23,48 +23,63 @@ export function useEntryNames() {
   const [isDiffLoading, setIsDiffLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const requestIdRef = useRef(0);
 
   function updatePath(nextPath: string) {
+    requestIdRef.current += 1;
     setPath(nextPath);
     setScannedPath("");
     setEntries([]);
     setDiffContent("");
     setSavedFilePaths([]);
     setSkippedSourcePaths([]);
+    setIsLoading(false);
+    setIsDiffLoading(false);
+    setIsExporting(false);
     setErrorMessage("");
   }
 
   async function scanEntries() {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    const requestedPath = path;
     setIsLoading(true);
     setErrorMessage("");
     setSavedFilePaths([]);
     setSkippedSourcePaths([]);
 
     try {
-      const tree = await getFileTree(path);
+      const tree = await getFileTree(requestedPath);
+      if (requestIdRef.current !== requestId) return;
       setEntries(tree);
-      setScannedPath(path);
+      setScannedPath(requestedPath);
     } catch (err) {
+      if (requestIdRef.current !== requestId) return;
       setErrorMessage(toErrorMessage(err));
     } finally {
-      setIsLoading(false);
+      if (requestIdRef.current === requestId) setIsLoading(false);
     }
   }
 
   async function fetchDiff() {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    const requestedPath = path;
     setIsDiffLoading(true);
     setErrorMessage("");
     setSavedFilePaths([]);
     setSkippedSourcePaths([]);
 
     try {
-      const diff = await getDiff(path);
+      const diff = await getDiff(requestedPath);
+      if (requestIdRef.current !== requestId) return;
       setDiffContent(diff);
-      setScannedPath(path);
+      setScannedPath(requestedPath);
     } catch (err) {
+      if (requestIdRef.current !== requestId) return;
       setErrorMessage(toErrorMessage(err));
     } finally {
-      setIsDiffLoading(false);
+      if (requestIdRef.current === requestId) setIsDiffLoading(false);
     }
   }
 
@@ -131,6 +146,10 @@ export function useEntryNames() {
     setErrorMessage("");
   }
 
+  function showErrorMessage(message: string) {
+    setErrorMessage(message);
+  }
+
   return {
     path,
     setPath: updatePath,
@@ -150,5 +169,6 @@ export function useEntryNames() {
     downloadDiff,
     openSavedFileFolder,
     clearErrorMessage,
+    showErrorMessage,
   };
 }

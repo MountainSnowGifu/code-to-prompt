@@ -4,16 +4,34 @@ import type { PromptTemplate } from "../types/prompt";
 
 const STORAGE_KEY = "code-to-prompt:templates";
 
+function isPromptTemplate(value: unknown): value is PromptTemplate {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Partial<Record<keyof PromptTemplate, unknown>>;
+  return (
+    typeof item.id === "string" &&
+    typeof item.title === "string" &&
+    typeof item.body === "string"
+  );
+}
+
 function loadTemplates(): PromptTemplate[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return JSON.parse(stored) as PromptTemplate[];
+    if (stored) {
+      const parsed = JSON.parse(stored) as unknown;
+      if (Array.isArray(parsed) && parsed.every(isPromptTemplate)) {
+        return parsed;
+      }
+      localStorage.removeItem(STORAGE_KEY);
+    }
   } catch {}
   return DEFAULT_TEMPLATES;
 }
 
 function saveTemplates(templates: PromptTemplate[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+  } catch {}
 }
 
 export function usePromptTemplates() {

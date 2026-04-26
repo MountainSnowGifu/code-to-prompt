@@ -108,6 +108,7 @@ pub enum EntryRepositoryError {
     WriteFileFailed { path: PathBuf, source: io::Error },
     InvalidUtf8FileName { path: PathBuf },
     GitCommandFailed(String),
+    NoReadableSourceFiles,
 }
 
 impl fmt::Display for EntryRepositoryError {
@@ -144,6 +145,9 @@ impl fmt::Display for EntryRepositoryError {
             }
             Self::GitCommandFailed(msg) => {
                 write!(f, "git command failed: {msg}")
+            }
+            Self::NoReadableSourceFiles => {
+                write!(f, "no readable source files were found")
             }
         }
     }
@@ -269,6 +273,10 @@ pub fn write_source_file<P: AsRef<Path>>(
     })?;
 
     let (chunks, skipped_paths) = build_source_chunks(folder_path, file_paths);
+    if chunks.is_empty() {
+        return Err(EntryRepositoryError::NoReadableSourceFiles);
+    }
+
     let ts = now_str();
     let base = sanitize_file_name(folder_name);
     let mut output_paths = Vec::new();
@@ -330,10 +338,6 @@ fn build_source_chunks(folder_path: &Path, file_paths: &[String]) -> (Vec<String
 
     if !current.is_empty() {
         chunks.push(current);
-    }
-
-    if chunks.is_empty() {
-        chunks.push(String::new());
     }
 
     (chunks, skipped_paths)

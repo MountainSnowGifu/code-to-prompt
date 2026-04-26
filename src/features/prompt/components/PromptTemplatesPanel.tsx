@@ -25,6 +25,7 @@ export function PromptTemplatesPanel() {
   const [draft, setDraft] = useState({ title: "", body: "" });
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [undoDelete, setUndoDelete] = useState<PromptTemplate | null>(null);
+  const [copyError, setCopyError] = useState(false);
 
   function startEdit(t: PromptTemplate) {
     setEditingId(t.id);
@@ -62,9 +63,13 @@ export function PromptTemplatesPanel() {
   }
 
   async function handleCopy(t: PromptTemplate) {
-    await navigator.clipboard.writeText(t.body);
-    setCopiedId(t.id);
-    setTimeout(() => setCopiedId(null), 2000);
+    try {
+      await navigator.clipboard.writeText(t.body);
+      setCopiedId(t.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      setCopyError(true);
+    }
   }
 
   return (
@@ -165,6 +170,17 @@ export function PromptTemplatesPanel() {
           onClose={() => setUndoDelete(null)}
         >
           Template deleted
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={copyError}
+        autoHideDuration={4000}
+        onClose={(_, reason) => { if (reason !== "clickaway") setCopyError(false); }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert severity="error" variant="filled" onClose={() => setCopyError(false)}>
+          Failed to copy template to clipboard.
         </Alert>
       </Snackbar>
     </>
