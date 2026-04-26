@@ -22,7 +22,7 @@ import { useEntryNames } from "../hooks/useEntryNames";
 import { pickFolder } from "../../../shared/lib/tauri";
 
 type ContentMode = "tree" | "diff";
-type LangMode = "all" | "rust" | "haskell" | "csharp" | "react";
+type LangMode = "all" | "rust" | "haskell" | "csharp" | "react" | "fsharp";
 
 const LANG_LABELS: Record<LangMode, string> = {
   all: "ALL",
@@ -30,6 +30,7 @@ const LANG_LABELS: Record<LangMode, string> = {
   haskell: "HASKELL",
   csharp: "C#",
   react: "REACT",
+  fsharp: "F#",
 };
 
 const LANG_PATTERNS: Record<Exclude<LangMode, "all">, string[]> = {
@@ -37,6 +38,7 @@ const LANG_PATTERNS: Record<Exclude<LangMode, "all">, string[]> = {
   haskell: [".hs", ".lhs", ".cabal"],
   csharp: [".cs", ".csproj", ".sln", ".xaml", ".razor", ".cshtml"],
   react: [".tsx", ".ts", ".jsx", ".js", ".css", ".scss", ".less", ".json", ".svg"],
+  fsharp: [".fs", ".fsi", ".fsx", ".fsproj"],
 };
 
 function matchesLang(filePath: string, lang: LangMode): boolean {
