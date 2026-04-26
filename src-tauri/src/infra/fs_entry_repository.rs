@@ -3,6 +3,91 @@ use std::fmt;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::process::Command;
+
+struct TreeNode {
+    name: String,
+    is_dir: bool,
+    children: Vec<TreeNode>,
+}
+
+impl TreeNode {
+    fn new(name: &str, is_dir: bool) -> Self {
+        Self { name: name.to_string(), is_dir, children: Vec::new() }
+    }
+
+    fn add_path(&mut self, parts: &[&str], is_dir: bool) {
+        if parts.is_empty() {
+            return;
+        }
+        let head = parts[0];
+        let rest = &parts[1..];
+        let child_is_dir = !rest.is_empty() || is_dir;
+
+        let child = self.children.iter_mut().find(|c| c.name == head);
+        let child = if let Some(c) = child {
+            c
+        } else {
+            self.children.push(TreeNode::new(head, child_is_dir));
+            self.children.last_mut().unwrap()
+        };
+        child.add_path(rest, is_dir);
+    }
+
+    fn sort_recursive(&mut self) {
+        self.children.sort_by(|a, b| match (a.is_dir, b.is_dir) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+        });
+        for child in &mut self.children {
+            child.sort_recursive();
+        }
+    }
+
+    fn to_flat_paths(&self, prefix: &str, out: &mut Vec<String>) {
+        for child in &self.children {
+            let path = if prefix.is_empty() {
+                child.name.clone()
+            } else {
+                format!("{}/{}", prefix, child.name)
+            };
+            if child.is_dir {
+                out.push(format!("{}/", path));
+                child.to_flat_paths(&path, out);
+            } else {
+                out.push(path);
+            }
+        }
+    }
+}
+
+fn build_tree_from_paths(root_name: &str, paths: &[String]) -> TreeNode {
+    let mut root = TreeNode::new(root_name, true);
+    for path in paths {
+        let is_dir = path.ends_with('/');
+        let clean = path.trim_end_matches('/');
+        let parts: Vec<&str> = clean.split('/').filter(|s| !s.is_empty()).collect();
+        if !parts.is_empty() {
+            root.add_path(&parts, is_dir);
+        }
+    }
+    root
+}
+
+fn render_ascii_tree(node: &TreeNode, prefix: &str, is_last: bool, out: &mut String) {
+    let connector = if is_last { "└── " } else { "├── " };
+    let suffix = if node.is_dir { "/" } else { "" };
+    out.push_str(&format!("{}{}{}{}\n", prefix, connector, node.name, suffix));
+
+    if !node.children.is_empty() {
+        let ext = if is_last { "    " } else { "│   " };
+        let new_prefix = format!("{}{}", prefix, ext);
+        for (i, child) in node.children.iter().enumerate() {
+            render_ascii_tree(child, &new_prefix, i == node.children.len() - 1, out);
+        }
+    }
+}
 
 #[derive(Debug)]
 pub enum EntryRepositoryError {
@@ -13,6 +98,7 @@ pub enum EntryRepositoryError {
     CreateDownloadsDirectoryFailed { path: PathBuf, source: io::Error },
     WriteFileFailed { path: PathBuf, source: io::Error },
     InvalidUtf8FileName { path: PathBuf },
+    GitCommandFailed(String),
 }
 
 impl fmt::Display for EntryRepositoryError {
@@ -47,8 +133,155 @@ impl fmt::Display for EntryRepositoryError {
             Self::InvalidUtf8FileName { path } => {
                 write!(f, "entry name is not valid UTF-8: {}", path.display())
             }
+            Self::GitCommandFailed(msg) => {
+                write!(f, "git command failed: {msg}")
+            }
         }
     }
+}
+
+pub fn get_file_tree<P: AsRef<Path>>(
+    folder_path: P,
+) -> Result<Vec<String>, EntryRepositoryError> {
+    let folder_path = folder_path.as_ref();
+
+    if !folder_path.is_dir() {
+        return Err(EntryRepositoryError::NotDirectory(folder_path.to_path_buf()));
+    }
+
+    let output = Command::new("git")
+        .args(["ls-files"])
+        .current_dir(folder_path)
+        .output()
+        .map_err(|err| EntryRepositoryError::GitCommandFailed(err.to_string()))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(EntryRepositoryError::GitCommandFailed(
+            stderr.trim().to_string(),
+        ));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    let mut root = TreeNode::new("", true);
+    for line in stdout.lines().filter(|l| !l.is_empty()) {
+        let parts: Vec<&str> = line.split('/').filter(|s| !s.is_empty()).collect();
+        if !parts.is_empty() {
+            root.add_path(&parts, false);
+        }
+    }
+    root.sort_recursive();
+
+    let mut paths = Vec::new();
+    root.to_flat_paths("", &mut paths);
+    Ok(paths)
+}
+
+pub fn write_file_tree_file<P: AsRef<Path>>(
+    folder_path: P,
+    tree_paths: &[String],
+) -> Result<PathBuf, EntryRepositoryError> {
+    let folder_path = folder_path.as_ref();
+    let folder_name = folder_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .filter(|n| !n.is_empty())
+        .unwrap_or("tree");
+
+    let file_name = format!("{}-tree.txt", sanitize_file_name(folder_name));
+    let output_dir = downloads_dir()?;
+    fs::create_dir_all(&output_dir).map_err(|err| {
+        EntryRepositoryError::CreateDownloadsDirectoryFailed {
+            path: output_dir.clone(),
+            source: err,
+        }
+    })?;
+
+    let output_path = output_dir.join(file_name);
+    let contents = build_file_tree_text(folder_path, tree_paths);
+    fs::write(&output_path, contents).map_err(|err| EntryRepositoryError::WriteFileFailed {
+        path: output_path.clone(),
+        source: err,
+    })?;
+
+    Ok(output_path)
+}
+
+fn build_file_tree_text(folder_path: &Path, tree_paths: &[String]) -> String {
+    let folder_name = folder_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or(".");
+
+    let mut root = build_tree_from_paths(folder_name, tree_paths);
+    root.sort_recursive();
+
+    let file_count = tree_paths.iter().filter(|p| !p.ends_with('/')).count();
+    let dir_count = tree_paths.iter().filter(|p| p.ends_with('/')).count();
+
+    let mut out = String::new();
+    out.push_str(&format!("{}/\n", root.name));
+    for (i, child) in root.children.iter().enumerate() {
+        render_ascii_tree(child, "", i == root.children.len() - 1, &mut out);
+    }
+    out.push('\n');
+    out.push_str(&format!("{} directories, {} files\n", dir_count, file_count));
+    out
+}
+
+pub fn get_git_diff<P: AsRef<Path>>(
+    folder_path: P,
+) -> Result<String, EntryRepositoryError> {
+    let folder_path = folder_path.as_ref();
+
+    if !folder_path.is_dir() {
+        return Err(EntryRepositoryError::NotDirectory(folder_path.to_path_buf()));
+    }
+
+    let output = Command::new("git")
+        .args(["diff", "HEAD"])
+        .current_dir(folder_path)
+        .output()
+        .map_err(|err| EntryRepositoryError::GitCommandFailed(err.to_string()))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(EntryRepositoryError::GitCommandFailed(
+            stderr.trim().to_string(),
+        ));
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
+pub fn write_git_diff_file<P: AsRef<Path>>(
+    folder_path: P,
+    diff: &str,
+) -> Result<PathBuf, EntryRepositoryError> {
+    let folder_path = folder_path.as_ref();
+    let folder_name = folder_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .filter(|n| !n.is_empty())
+        .unwrap_or("diff");
+
+    let file_name = format!("{}-diff.txt", sanitize_file_name(folder_name));
+    let output_dir = downloads_dir()?;
+    fs::create_dir_all(&output_dir).map_err(|err| {
+        EntryRepositoryError::CreateDownloadsDirectoryFailed {
+            path: output_dir.clone(),
+            source: err,
+        }
+    })?;
+
+    let output_path = output_dir.join(file_name);
+    fs::write(&output_path, diff).map_err(|err| EntryRepositoryError::WriteFileFailed {
+        path: output_path.clone(),
+        source: err,
+    })?;
+
+    Ok(output_path)
 }
 
 pub fn get_entry_names<P: AsRef<Path>>(

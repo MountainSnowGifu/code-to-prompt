@@ -1,0 +1,80 @@
+src-tauri/
+  src/
+    main.rs
+    lib.rs
+
+    commands/
+      mod.rs
+      todo_command.rs
+
+    app/
+      mod.rs
+      todo_service.rs
+      error.rs
+
+    domain/
+      mod.rs
+      todo.rs
+
+    infra/
+      mod.rs
+      todo_repository.rs
+      memory_todo_repository.rs
+
+    state.rs
+
+Frontend
+   ↓ invoke()
+commands/        ← Tauri 依存あり
+   ↓
+app/             ← ユースケース、業務処理
+   ↓
+domain/          ← Entity / Value Object
+   ↓
+infra/           ← DB, ファイル, API, repository 実装
+
+
+フロント側
+src/
+  main.tsx
+  App.tsx
+
+  app/
+    providers/
+      QueryProvider.tsx
+    routes/
+      AppRoutes.tsx
+
+  features/
+    todo/
+      components/
+        TodoForm.tsx
+        TodoList.tsx
+        TodoItem.tsx
+      hooks/
+        useTodos.ts
+      pages/
+        TodoPage.tsx
+      types/
+        todo.ts
+      api/
+        todoApi.ts
+
+  shared/
+    lib/
+      tauri.ts
+    components/
+      Button.tsx
+      TextInput.tsx
+    types/
+      result.ts
+
+React UI
+  ↓
+hooks/
+  ↓
+api/
+  ↓
+shared/lib/tauri.ts
+  ↓
+Rust command
