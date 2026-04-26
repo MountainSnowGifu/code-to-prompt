@@ -58,8 +58,8 @@ pub fn export_diff_command(path: &str) -> Result<ExportDiffResponse, String> {
 }
 
 #[tauri::command]
-pub fn count_source_chars_command(path: &str, paths: Vec<String>) -> usize {
-    infra::count_source_chars(path, &paths)
+pub fn count_source_chars_command(path: &str, paths: Vec<String>) -> Result<usize, String> {
+    infra::count_source_chars(path, &paths).map_err(|err| err.to_string())
 }
 
 #[tauri::command]

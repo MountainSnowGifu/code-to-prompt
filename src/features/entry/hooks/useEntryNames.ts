@@ -84,6 +84,7 @@ export function useEntryNames() {
   }
 
   async function downloadEntries(paths: string[]) {
+    const requestId = requestIdRef.current;
     setIsExporting(true);
     setErrorMessage("");
     setSavedFilePaths([]);
@@ -91,15 +92,18 @@ export function useEntryNames() {
 
     try {
       const outputPath = await exportFilteredTree(scannedPath, paths);
+      if (requestIdRef.current !== requestId) return;
       setSavedFilePaths([outputPath]);
     } catch (err) {
+      if (requestIdRef.current !== requestId) return;
       setErrorMessage(toErrorMessage(err));
     } finally {
-      setIsExporting(false);
+      if (requestIdRef.current === requestId) setIsExporting(false);
     }
   }
 
   async function downloadSource(paths: string[]) {
+    const requestId = requestIdRef.current;
     setIsExporting(true);
     setErrorMessage("");
     setSavedFilePaths([]);
@@ -107,16 +111,19 @@ export function useEntryNames() {
 
     try {
       const result = await exportSource(scannedPath, paths);
+      if (requestIdRef.current !== requestId) return;
       setSavedFilePaths(result.output_paths);
       setSkippedSourcePaths(result.skipped_paths);
     } catch (err) {
+      if (requestIdRef.current !== requestId) return;
       setErrorMessage(toErrorMessage(err));
     } finally {
-      setIsExporting(false);
+      if (requestIdRef.current === requestId) setIsExporting(false);
     }
   }
 
   async function downloadDiff() {
+    const requestId = requestIdRef.current;
     setIsExporting(true);
     setErrorMessage("");
     setSavedFilePaths([]);
@@ -124,12 +131,14 @@ export function useEntryNames() {
 
     try {
       const result = await exportDiff(scannedPath);
+      if (requestIdRef.current !== requestId) return;
       setDiffContent(result.content);
       setSavedFilePaths([result.output_path]);
     } catch (err) {
+      if (requestIdRef.current !== requestId) return;
       setErrorMessage(toErrorMessage(err));
     } finally {
-      setIsExporting(false);
+      if (requestIdRef.current === requestId) setIsExporting(false);
     }
   }
 

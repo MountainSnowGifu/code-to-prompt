@@ -14,12 +14,14 @@ import {
   ToggleButtonGroup,
   Tooltip,
   Typography,
+  useTheme,
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { countSourceChars } from "../api/entryApi";
 import { PromptTemplatesPanel } from "../../prompt/components/PromptTemplatesPanel";
 import { useEntryNames } from "../hooks/useEntryNames";
 import { pickFolder } from "../../../shared/lib/tauri";
+import { useThemeMode } from "../../../app/providers/AppThemeProvider";
 
 type ContentMode = "tree" | "diff";
 type LangMode = "all" | "rust" | "haskell" | "csharp" | "react" | "fsharp";
@@ -83,6 +85,22 @@ function FolderOpenIcon() {
   );
 }
 
+function ThemeModeIcon({ mode }: { mode: "dark" | "light" }) {
+  if (mode === "dark") {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 4.5a1 1 0 0 1 1 1V7a1 1 0 1 1-2 0V5.5a1 1 0 0 1 1-1Zm0 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7.5-4.5a1 1 0 1 1 0 2H18a1 1 0 1 1 0-2h1.5ZM6 12a1 1 0 0 1-1 1H3.5a1 1 0 1 1 0-2H5a1 1 0 0 1 1 1Zm10.95-5.95a1 1 0 0 1 1.41 1.41l-1.06 1.06a1 1 0 1 1-1.41-1.41l1.06-1.06ZM8.11 15.89a1 1 0 0 1 0 1.41l-1.06 1.06a1 1 0 0 1-1.41-1.41l1.06-1.06a1 1 0 0 1 1.41 0Zm10.25 1.06a1 1 0 1 1-1.41 1.41l-1.06-1.06a1 1 0 1 1 1.41-1.41l1.06 1.06ZM8.11 8.52a1 1 0 0 1-1.41 0L5.64 7.46a1 1 0 0 1 1.41-1.41l1.06 1.06a1 1 0 0 1 0 1.41ZM12 17a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0V18a1 1 0 0 1 1-1Z" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M21 14.2A8 8 0 0 1 9.8 3a1 1 0 0 0-1.1-1.4A10 10 0 1 0 22.4 15.3a1 1 0 0 0-1.4-1.1ZM12 20a8 8 0 0 1-5.6-13.7 10 10 0 0 0 11.3 11.3A8 8 0 0 1 12 20Z" />
+    </svg>
+  );
+}
+
 function diffLineColor(line: string): string {
   if (line.startsWith("+++") || line.startsWith("---")) return "text.secondary";
   if (line.startsWith("+")) return "success.main";
@@ -93,6 +111,8 @@ function diffLineColor(line: string): string {
 }
 
 export function EntryPage() {
+  const theme = useTheme();
+  const { mode, toggleMode } = useThemeMode();
   const [contentMode, setContentMode] = useState<ContentMode>("tree");
   const [langMode, setLangMode] = useState<LangMode>("all");
   const [isCopied, setIsCopied] = useState(false);
@@ -195,7 +215,9 @@ export function EntryPage() {
         minHeight: "100vh",
         py: { xs: 3, sm: 4 },
         background:
-          "radial-gradient(circle at 50% 0%, rgba(57, 255, 136, 0.08), transparent 360px), #050607",
+          theme.palette.mode === "dark"
+            ? "radial-gradient(circle at 50% 0%, rgba(57, 255, 136, 0.08), transparent 360px), #050607"
+            : "radial-gradient(circle at 50% 0%, rgba(0, 122, 69, 0.1), transparent 360px), #f4f7f5",
       }}
     >
       <Container maxWidth="md">
@@ -203,30 +225,52 @@ export function EntryPage() {
           <Box
             component="header"
             sx={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: 2,
               borderLeft: "2px solid",
               borderColor: "primary.main",
               pl: 2,
             }}
           >
-            <Typography
-              component="p"
-              sx={{
-                mb: 1,
-                color: "primary.main",
-                fontSize: "0.76rem",
-                fontWeight: 700,
-                textTransform: "uppercase",
-              }}
-            >
-              $ code-to-prompt
-            </Typography>
-            <Typography
-              component="h1"
-              variant="h4"
-              sx={{ color: "text.primary", fontWeight: 800 }}
-            >
-              {contentMode === "tree" ? "Code to Prompt" : "Diff to Prompt"}
-            </Typography>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                component="p"
+                sx={{
+                  mb: 1,
+                  color: "primary.main",
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                }}
+              >
+                $ code-to-prompt
+              </Typography>
+              <Typography
+                component="h1"
+                variant="h4"
+                sx={{ color: "text.primary", fontWeight: 800 }}
+              >
+                {contentMode === "tree" ? "Code to Prompt" : "Diff to Prompt"}
+              </Typography>
+            </Box>
+            <Tooltip title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
+              <IconButton
+                aria-label={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                onClick={toggleMode}
+                size="small"
+                sx={{
+                  flexShrink: 0,
+                  color: "primary.main",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                }}
+              >
+                <ThemeModeIcon mode={mode} />
+              </IconButton>
+            </Tooltip>
           </Box>
 
           <Paper
@@ -484,7 +528,7 @@ export function EntryPage() {
                   minHeight: 280,
                   overflow: "auto",
                   py: 1,
-                  bgcolor: "#030505",
+                  bgcolor: theme.palette.mode === "dark" ? "#030505" : "#fbfdfb",
                   fontFamily: "inherit",
                   fontSize: "0.82rem",
                 }}
@@ -501,7 +545,12 @@ export function EntryPage() {
                             py: "2px",
                             color: isDir ? "primary.main" : "text.primary",
                             fontWeight: isDir ? 600 : 400,
-                            "&:hover": { bgcolor: "rgba(57, 255, 136, 0.08)" },
+                            "&:hover": {
+                              bgcolor:
+                                theme.palette.mode === "dark"
+                                  ? "rgba(57, 255, 136, 0.08)"
+                                  : "rgba(0, 122, 69, 0.08)",
+                            },
                             whiteSpace: "nowrap",
                             overflow: "hidden",
                             textOverflow: "ellipsis",

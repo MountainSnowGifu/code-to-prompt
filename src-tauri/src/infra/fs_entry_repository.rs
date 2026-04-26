@@ -3,7 +3,7 @@ use std::env;
 use std::fmt;
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 
 fn now_str() -> String {
@@ -109,6 +109,7 @@ pub enum EntryRepositoryError {
     InvalidUtf8FileName { path: PathBuf },
     GitCommandFailed(String),
     NoReadableSourceFiles,
+    InvalidRelativePath(String),
 }
 
 impl fmt::Display for EntryRepositoryError {
@@ -149,8 +150,55 @@ impl fmt::Display for EntryRepositoryError {
             Self::NoReadableSourceFiles => {
                 write!(f, "no readable source files were found")
             }
+            Self::InvalidRelativePath(path) => {
+                write!(f, "path must stay inside the selected folder: {path}")
+            }
         }
     }
+}
+
+fn safe_relative_path(rel_path: &str) -> Result<&Path, EntryRepositoryError> {
+    let path = Path::new(rel_path);
+    if path.is_absolute()
+        || path.components().any(|component| {
+            matches!(
+                component,
+                Component::ParentDir | Component::Prefix(_) | Component::RootDir
+            )
+        })
+    {
+        return Err(EntryRepositoryError::InvalidRelativePath(
+            rel_path.to_string(),
+        ));
+    }
+
+    Ok(path)
+}
+
+fn resolve_safe_child(root: &Path, rel_path: &str) -> Result<PathBuf, EntryRepositoryError> {
+    let relative = safe_relative_path(rel_path)?;
+    let root = root
+        .canonicalize()
+        .map_err(|err| EntryRepositoryError::ReadDirFailed {
+            path: root.to_path_buf(),
+            source: err,
+        })?;
+    let full_path = root.join(relative);
+    let canonical =
+        full_path
+            .canonicalize()
+            .map_err(|err| EntryRepositoryError::ReadEntryFailed {
+                path: full_path.clone(),
+                source: err,
+            })?;
+
+    if !canonical.starts_with(&root) {
+        return Err(EntryRepositoryError::InvalidRelativePath(
+            rel_path.to_string(),
+        ));
+    }
+
+    Ok(canonical)
 }
 
 pub fn get_file_tree<P: AsRef<Path>>(folder_path: P) -> Result<Vec<String>, EntryRepositoryError> {
@@ -163,7 +211,7 @@ pub fn get_file_tree<P: AsRef<Path>>(folder_path: P) -> Result<Vec<String>, Entr
     }
 
     let output = Command::new("git")
-        .args(["ls-files"])
+        .args(["ls-files", "--cached", "--others", "--exclude-standard"])
         .current_dir(folder_path)
         .output()
         .map_err(|err| EntryRepositoryError::GitCommandFailed(err.to_string()))?;
@@ -272,7 +320,7 @@ pub fn write_source_file<P: AsRef<Path>>(
         }
     })?;
 
-    let (chunks, skipped_paths) = build_source_chunks(folder_path, file_paths);
+    let (chunks, skipped_paths) = build_source_chunks(folder_path, file_paths)?;
     if chunks.is_empty() {
         return Err(EntryRepositoryError::NoReadableSourceFiles);
     }
@@ -301,7 +349,10 @@ pub fn write_source_file<P: AsRef<Path>>(
     })
 }
 
-fn build_source_chunks(folder_path: &Path, file_paths: &[String]) -> (Vec<String>, Vec<String>) {
+fn build_source_chunks(
+    folder_path: &Path,
+    file_paths: &[String],
+) -> Result<(Vec<String>, Vec<String>), EntryRepositoryError> {
     let mut chunks: Vec<String> = Vec::new();
     let mut current = String::new();
     let mut skipped_paths = Vec::new();
@@ -310,7 +361,7 @@ fn build_source_chunks(folder_path: &Path, file_paths: &[String]) -> (Vec<String
         if rel_path.ends_with('/') {
             continue;
         }
-        let full_path = folder_path.join(rel_path);
+        let full_path = resolve_safe_child(folder_path, rel_path)?;
         let content = match fs::read_to_string(&full_path) {
             Ok(c) => c,
             Err(_) => {
@@ -340,22 +391,25 @@ fn build_source_chunks(folder_path: &Path, file_paths: &[String]) -> (Vec<String
         chunks.push(current);
     }
 
-    (chunks, skipped_paths)
+    Ok((chunks, skipped_paths))
 }
 
-pub fn count_source_chars<P: AsRef<Path>>(folder_path: P, file_paths: &[String]) -> usize {
+pub fn count_source_chars<P: AsRef<Path>>(
+    folder_path: P,
+    file_paths: &[String],
+) -> Result<usize, EntryRepositoryError> {
     let folder_path = folder_path.as_ref();
     let mut total = 0usize;
     for rel_path in file_paths {
         if rel_path.ends_with('/') {
             continue;
         }
-        let full_path = folder_path.join(rel_path);
+        let full_path = resolve_safe_child(folder_path, rel_path)?;
         if let Ok(content) = fs::read_to_string(&full_path) {
             total += content.chars().count();
         }
     }
-    total
+    Ok(total)
 }
 
 pub fn get_git_diff<P: AsRef<Path>>(folder_path: P) -> Result<String, EntryRepositoryError> {
@@ -367,20 +421,83 @@ pub fn get_git_diff<P: AsRef<Path>>(folder_path: P) -> Result<String, EntryRepos
         ));
     }
 
-    let output = Command::new("git")
+    let tracked_output = Command::new("git")
         .args(["diff", "HEAD"])
         .current_dir(folder_path)
         .output()
         .map_err(|err| EntryRepositoryError::GitCommandFailed(err.to_string()))?;
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+    if !tracked_output.status.success() {
+        let stderr = String::from_utf8_lossy(&tracked_output.stderr);
         return Err(EntryRepositoryError::GitCommandFailed(
             stderr.trim().to_string(),
         ));
     }
 
-    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    let untracked_output = Command::new("git")
+        .args(["ls-files", "--others", "--exclude-standard"])
+        .current_dir(folder_path)
+        .output()
+        .map_err(|err| EntryRepositoryError::GitCommandFailed(err.to_string()))?;
+
+    if !untracked_output.status.success() {
+        let stderr = String::from_utf8_lossy(&untracked_output.stderr);
+        return Err(EntryRepositoryError::GitCommandFailed(
+            stderr.trim().to_string(),
+        ));
+    }
+
+    let mut diff = String::from_utf8_lossy(&tracked_output.stdout).into_owned();
+    for rel_path in String::from_utf8_lossy(&untracked_output.stdout)
+        .lines()
+        .filter(|line| !line.is_empty())
+    {
+        let Some(new_file_diff) = build_untracked_file_diff(folder_path, rel_path)? else {
+            continue;
+        };
+        if !diff.is_empty() && !diff.ends_with('\n') {
+            diff.push('\n');
+        }
+        diff.push_str(&new_file_diff);
+    }
+
+    Ok(diff)
+}
+
+fn build_untracked_file_diff(
+    folder_path: &Path,
+    rel_path: &str,
+) -> Result<Option<String>, EntryRepositoryError> {
+    let full_path = resolve_safe_child(folder_path, rel_path)?;
+    let content = match fs::read_to_string(&full_path) {
+        Ok(content) => content,
+        Err(_) => return Ok(None),
+    };
+
+    let mut out = String::new();
+    out.push_str(&format!("diff --git a/{0} b/{0}\n", rel_path));
+    out.push_str("new file mode 100644\n");
+    out.push_str("index 0000000..0000000\n");
+    out.push_str("--- /dev/null\n");
+    out.push_str(&format!("+++ b/{}\n", rel_path));
+
+    if content.is_empty() {
+        return Ok(Some(out));
+    }
+
+    let line_count = content.lines().count();
+    out.push_str(&format!("@@ -0,0 +1,{} @@\n", line_count));
+    for line in content.lines() {
+        out.push('+');
+        out.push_str(line);
+        out.push('\n');
+    }
+
+    if !content.ends_with('\n') {
+        out.push_str("\\ No newline at end of file\n");
+    }
+
+    Ok(Some(out))
 }
 
 pub fn write_git_diff_file<P: AsRef<Path>>(
