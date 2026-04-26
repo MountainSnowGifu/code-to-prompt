@@ -17,7 +17,7 @@ export function useEntryNames() {
   const [scannedPath, setScannedPath] = useState("");
   const [entries, setEntries] = useState<string[]>([]);
   const [diffContent, setDiffContent] = useState("");
-  const [savedFilePath, setSavedFilePath] = useState("");
+  const [savedFilePaths, setSavedFilePaths] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDiffLoading, setIsDiffLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -26,7 +26,7 @@ export function useEntryNames() {
   async function scanEntries() {
     setIsLoading(true);
     setErrorMessage("");
-    setSavedFilePath("");
+    setSavedFilePaths([]);
 
     try {
       const tree = await getFileTree(path);
@@ -42,7 +42,7 @@ export function useEntryNames() {
   async function fetchDiff() {
     setIsDiffLoading(true);
     setErrorMessage("");
-    setSavedFilePath("");
+    setSavedFilePaths([]);
 
     try {
       const diff = await getDiff(path);
@@ -58,11 +58,11 @@ export function useEntryNames() {
   async function downloadEntries(paths: string[]) {
     setIsExporting(true);
     setErrorMessage("");
-    setSavedFilePath("");
+    setSavedFilePaths([]);
 
     try {
       const outputPath = await exportFilteredTree(scannedPath, paths);
-      setSavedFilePath(outputPath);
+      setSavedFilePaths([outputPath]);
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
     } finally {
@@ -73,11 +73,11 @@ export function useEntryNames() {
   async function downloadSource(paths: string[]) {
     setIsExporting(true);
     setErrorMessage("");
-    setSavedFilePath("");
+    setSavedFilePaths([]);
 
     try {
-      const outputPath = await exportSource(scannedPath, paths);
-      setSavedFilePath(outputPath);
+      const outputPaths = await exportSource(scannedPath, paths);
+      setSavedFilePaths(outputPaths);
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
     } finally {
@@ -88,12 +88,12 @@ export function useEntryNames() {
   async function downloadDiff() {
     setIsExporting(true);
     setErrorMessage("");
-    setSavedFilePath("");
+    setSavedFilePaths([]);
 
     try {
       const result = await exportDiff(scannedPath);
       setDiffContent(result.content);
-      setSavedFilePath(result.output_path);
+      setSavedFilePaths([result.output_path]);
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
     } finally {
@@ -102,8 +102,9 @@ export function useEntryNames() {
   }
 
   async function openSavedFileFolder() {
+    if (savedFilePaths.length === 0) return;
     try {
-      await revealEntryNamesFile(savedFilePath);
+      await revealEntryNamesFile(savedFilePaths[0]);
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
     }
@@ -119,7 +120,7 @@ export function useEntryNames() {
     scannedPath,
     entries,
     diffContent,
-    savedFilePath,
+    savedFilePaths,
     isLoading,
     isDiffLoading,
     isExporting,

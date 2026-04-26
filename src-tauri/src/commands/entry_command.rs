@@ -57,16 +57,19 @@ pub fn count_source_chars_command(path: &str, paths: Vec<String>) -> usize {
 }
 
 #[tauri::command]
-pub fn export_source_command(path: &str, paths: Vec<String>) -> Result<String, String> {
+pub fn export_source_command(path: &str, paths: Vec<String>) -> Result<Vec<String>, String> {
     eprintln!(
         "[export_source_command] called: path={path:?}, {} files",
         paths.len()
     );
 
     match app::export_source(path, paths) {
-        Ok(output_path) => {
-            eprintln!("[export_source_command] success: exported to {output_path}");
-            Ok(output_path)
+        Ok(output_paths) => {
+            eprintln!(
+                "[export_source_command] success: {} file(s) exported",
+                output_paths.len()
+            );
+            Ok(output_paths)
         }
         Err(err) => {
             eprintln!("[export_source_command] error: {err}");

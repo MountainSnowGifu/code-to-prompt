@@ -37,7 +37,7 @@ export function exportFilteredTree(path: string, paths: string[]) {
 }
 
 export function exportSource(path: string, paths: string[]) {
-  return invokeCommand<string>("export_source_command", { path, paths });
+  return invokeCommand<string[]>("export_source_command", { path, paths });
 }
 
 export function countSourceChars(path: string, paths: string[]) {

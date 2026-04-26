@@ -235,10 +235,12 @@ fn build_file_tree_text(folder_path: &Path, tree_paths: &[String]) -> String {
     out
 }
 
+const SOURCE_CHUNK_CHARS: usize = 30_000;
+
 pub fn write_source_file<P: AsRef<Path>>(
     folder_path: P,
     file_paths: &[String],
-) -> Result<PathBuf, EntryRepositoryError> {
+) -> Result<Vec<PathBuf>, EntryRepositoryError> {
     let folder_path = folder_path.as_ref();
     let folder_name = folder_path
         .file_name()
@@ -246,7 +248,6 @@ pub fn write_source_file<P: AsRef<Path>>(
         .filter(|n| !n.is_empty())
         .unwrap_or("source");
 
-    let file_name = format!("{}-source-{}.txt", sanitize_file_name(folder_name), now_str());
     let output_dir = downloads_dir()?;
     fs::create_dir_all(&output_dir).map_err(|err| {
         EntryRepositoryError::CreateDownloadsDirectoryFailed {
@@ -255,39 +256,68 @@ pub fn write_source_file<P: AsRef<Path>>(
         }
     })?;
 
-    let output_path = output_dir.join(file_name);
-    let contents = build_source_text(folder_path, file_paths);
-    fs::write(&output_path, &contents).map_err(|err| EntryRepositoryError::WriteFileFailed {
-        path: output_path.clone(),
-        source: err,
-    })?;
+    let chunks = build_source_chunks(folder_path, file_paths);
+    let ts = now_str();
+    let base = sanitize_file_name(folder_name);
+    let mut output_paths = Vec::new();
 
-    Ok(output_path)
+    for (i, chunk) in chunks.iter().enumerate() {
+        let file_name = if chunks.len() == 1 {
+            format!("{}-source-{}.txt", base, ts)
+        } else {
+            format!("{}-source-{}-{}.txt", base, ts, i + 1)
+        };
+        let output_path = output_dir.join(file_name);
+        fs::write(&output_path, chunk).map_err(|err| EntryRepositoryError::WriteFileFailed {
+            path: output_path.clone(),
+            source: err,
+        })?;
+        output_paths.push(output_path);
+    }
+
+    Ok(output_paths)
 }
 
-fn build_source_text(folder_path: &Path, file_paths: &[String]) -> String {
-    let mut out = String::new();
+fn build_source_chunks(folder_path: &Path, file_paths: &[String]) -> Vec<String> {
+    let mut chunks: Vec<String> = Vec::new();
+    let mut current = String::new();
 
     for rel_path in file_paths {
         if rel_path.ends_with('/') {
             continue;
         }
-
         let full_path = folder_path.join(rel_path);
         let content = match fs::read_to_string(&full_path) {
             Ok(c) => c,
-            Err(_) => continue, // skip binary or unreadable files
+            Err(_) => continue,
         };
 
-        out.push_str(&format!("=== {} ===\n", rel_path));
-        out.push_str(&content);
+        let mut entry = format!("=== {} ===\n", rel_path);
+        entry.push_str(&content);
         if !content.ends_with('\n') {
-            out.push('\n');
+            entry.push('\n');
         }
-        out.push('\n');
+        entry.push('\n');
+
+        // ファイル境界で分割 — 現在のチャンクが空でなく、追加すると超過する場合はフラッシュ
+        if !current.is_empty()
+            && current.chars().count() + entry.chars().count() > SOURCE_CHUNK_CHARS
+        {
+            chunks.push(std::mem::take(&mut current));
+        }
+
+        current.push_str(&entry);
     }
 
-    out
+    if !current.is_empty() {
+        chunks.push(current);
+    }
+
+    if chunks.is_empty() {
+        chunks.push(String::new());
+    }
+
+    chunks
 }
 
 pub fn count_source_chars<P: AsRef<Path>>(folder_path: P, file_paths: &[String]) -> usize {
