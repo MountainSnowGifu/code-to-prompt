@@ -81,13 +81,28 @@ export function PromptTemplatesPanel() {
           borderColor: "divider",
           bgcolor: "background.paper",
           overflow: "hidden",
+          position: "relative",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(180deg, rgba(0,255,106,0.055), transparent 96px)",
+            pointerEvents: "none",
+          },
         }}
       >
         <Stack
           direction="row"
           sx={{ alignItems: "center", justifyContent: "space-between", px: 2, py: 1.5 }}
         >
-          <Typography sx={{ fontWeight: 700, color: "primary.main" }}>
+          <Typography
+            sx={{
+              fontWeight: 800,
+              color: "primary.main",
+              textShadow: "0 0 14px rgba(0, 255, 106, 0.28)",
+            }}
+          >
             $ templates
           </Typography>
           <Stack direction="row" spacing={1}>
@@ -197,7 +212,7 @@ type ViewCardProps = {
 
 function ViewCard({ template, copied, onCopy, onEdit, onDelete }: ViewCardProps) {
   return (
-    <Box sx={{ px: 2, py: 1.5, "&:hover": { bgcolor: "rgba(57, 255, 136, 0.06)" } }}>
+    <Box sx={{ px: 2, py: 1.5, "&:hover": { bgcolor: "rgba(0, 255, 106, 0.075)" } }}>
       <Stack direction="row" sx={{ alignItems: "flex-start", justifyContent: "space-between", gap: 1 }}>
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography sx={{ fontWeight: 700, fontSize: "0.9rem", mb: 0.25 }}>
@@ -252,7 +267,7 @@ type EditCardProps = {
 
 function EditCard({ draft, onChange, onSave, onCancel }: EditCardProps) {
   return (
-    <Box sx={{ px: 2, py: 1.5, bgcolor: "rgba(57, 255, 136, 0.04)" }}>
+    <Box sx={{ px: 2, py: 1.5, bgcolor: "rgba(0, 255, 106, 0.055)" }}>
       <Stack spacing={1.5}>
         <TextField
           label="Title"

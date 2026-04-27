@@ -251,14 +251,15 @@ export function EntryPage() {
 
   return (
     <Box
+      className={`matrix-shell matrix-shell-${theme.palette.mode}`}
       component="main"
       sx={{
         minHeight: "100vh",
         py: { xs: 3, sm: 4 },
         background:
           theme.palette.mode === "dark"
-            ? "radial-gradient(circle at 50% 0%, rgba(57, 255, 136, 0.08), transparent 360px), #050607"
-            : "radial-gradient(circle at 50% 0%, rgba(0, 122, 69, 0.1), transparent 360px), #f4f7f5",
+            ? "linear-gradient(180deg, rgba(0, 19, 8, 0.72), rgba(0, 0, 0, 0.96))"
+            : "linear-gradient(180deg, rgba(238, 250, 241, 0.7), rgba(220, 239, 226, 0.94))",
       }}
     >
       <Container maxWidth="md">
@@ -273,6 +274,10 @@ export function EntryPage() {
               borderLeft: "2px solid",
               borderColor: "primary.main",
               pl: 2,
+              textShadow:
+                theme.palette.mode === "dark"
+                  ? "0 0 16px rgba(0, 255, 106, 0.34)"
+                  : "0 0 12px rgba(0, 107, 58, 0.12)",
             }}
           >
             <Box sx={{ minWidth: 0 }}>
@@ -284,6 +289,7 @@ export function EntryPage() {
                   fontSize: "0.76rem",
                   fontWeight: 700,
                   textTransform: "uppercase",
+                  letterSpacing: "0.12em",
                 }}
               >
                 $ code-to-prompt
@@ -291,7 +297,14 @@ export function EntryPage() {
               <Typography
                 component="h1"
                 variant="h4"
-                sx={{ color: "text.primary", fontWeight: 800 }}
+                sx={{
+                  color: "text.primary",
+                  fontWeight: 900,
+                  textShadow:
+                    theme.palette.mode === "dark"
+                      ? "0 0 22px rgba(0, 255, 106, 0.42)"
+                      : "0 0 14px rgba(0, 107, 58, 0.16)",
+                }}
               >
                 {contentMode === "tree" ? "Code to Prompt" : "Diff to Prompt"}
               </Typography>
@@ -324,6 +337,18 @@ export function EntryPage() {
               border: "1px solid",
               borderColor: "divider",
               bgcolor: "background.paper",
+              position: "relative",
+              "&::before": {
+                content: '""',
+                position: "absolute",
+                inset: 0,
+                borderTop: "1px solid",
+                borderColor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(114, 255, 159, 0.42)"
+                    : "rgba(0, 107, 58, 0.22)",
+                pointerEvents: "none",
+              },
             }}
           >
             <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
@@ -376,7 +401,16 @@ export function EntryPage() {
           {contentMode === "tree" && (
             <Box sx={{ display: "flex", alignItems: "center", gap: 2, overflowX: "auto", pb: 0.5 }}>
               <Typography
-                sx={{ fontSize: "0.78rem", fontWeight: 700, color: "text.secondary", textTransform: "uppercase" }}
+                sx={{
+                  fontSize: "0.78rem",
+                  fontWeight: 800,
+                  color: "primary.main",
+                  textTransform: "uppercase",
+                  textShadow:
+                    theme.palette.mode === "dark"
+                      ? "0 0 12px rgba(0, 255, 106, 0.28)"
+                      : "0 0 10px rgba(0, 107, 58, 0.12)",
+                }}
               >
                 Lang
               </Typography>
@@ -451,6 +485,17 @@ export function EntryPage() {
               borderColor: "divider",
               bgcolor: "background.paper",
               overflow: "hidden",
+              position: "relative",
+              "&::before": {
+                content: '""',
+                position: "absolute",
+                inset: 0,
+                background:
+                  theme.palette.mode === "dark"
+                    ? "linear-gradient(90deg, rgba(0,255,106,0.1), transparent 24%, transparent 76%, rgba(0,255,106,0.08))"
+                    : "linear-gradient(90deg, rgba(0,107,58,0.08), transparent 24%, transparent 76%, rgba(0,107,58,0.06))",
+                pointerEvents: "none",
+              },
             }}
           >
             <Stack
@@ -616,9 +661,16 @@ export function EntryPage() {
                   minHeight: 280,
                   overflow: "auto",
                   py: 1,
-                  bgcolor: theme.palette.mode === "dark" ? "#030505" : "#fbfdfb",
+                  bgcolor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(0, 6, 2, 0.94)"
+                      : "rgba(251, 255, 252, 0.9)",
                   fontFamily: "inherit",
                   fontSize: "0.82rem",
+                  textShadow:
+                    theme.palette.mode === "dark"
+                      ? "0 0 8px rgba(0, 255, 106, 0.18)"
+                      : "none",
                 }}
               >
                 {contentMode === "tree"

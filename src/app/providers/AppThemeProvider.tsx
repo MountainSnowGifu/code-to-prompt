@@ -30,74 +30,96 @@ function buildTheme(mode: ThemeMode) {
   const isDark = mode === "dark";
 
   return createTheme({
-  palette: {
-    mode,
-    primary: {
-      main: isDark ? "#39ff88" : "#007a45",
+    palette: {
+      mode,
+      primary: {
+        main: isDark ? "#00ff6a" : "#006b3a",
+      },
+      success: {
+        main: isDark ? "#72ff9f" : "#008f4d",
+      },
+      error: {
+        main: isDark ? "#ff4d6d" : "#b4233b",
+      },
+      info: {
+        main: isDark ? "#48f5ff" : "#006d9c",
+      },
+      background: {
+        default: isDark ? "#000704" : "#e8f3ea",
+        paper: isDark ? "rgba(1, 15, 8, 0.9)" : "rgba(248, 255, 250, 0.92)",
+      },
+      text: {
+        primary: isDark ? "#d9ffe5" : "#092316",
+        secondary: isDark ? "#6dbe86" : "#386149",
+      },
+      divider: isDark ? "rgba(0, 255, 106, 0.28)" : "rgba(0, 107, 58, 0.24)",
     },
-    success: {
-      main: isDark ? "#39ff88" : "#007a45",
+    shape: {
+      borderRadius: 4,
     },
-    error: {
-      main: isDark ? "#ff5f7a" : "#b4233b",
+    typography: {
+      fontFamily:
+        '"JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
     },
-    info: {
-      main: isDark ? "#65d8ff" : "#006d9c",
-    },
-    background: {
-      default: isDark ? "#050607" : "#f4f7f5",
-      paper: isDark ? "#0b0f10" : "#ffffff",
-    },
-    text: {
-      primary: isDark ? "#d8ffe6" : "#10241a",
-      secondary: isDark ? "#7f9b8d" : "#527061",
-    },
-    divider: isDark ? "rgba(57, 255, 136, 0.22)" : "rgba(0, 122, 69, 0.2)",
-  },
-  shape: {
-    borderRadius: 6,
-  },
-  typography: {
-    fontFamily:
-      '"JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
-  },
-  components: {
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          backgroundImage: "none",
-          boxShadow: isDark
-            ? "0 0 0 1px rgba(57, 255, 136, 0.08)"
-            : "0 0 0 1px rgba(0, 122, 69, 0.08)",
+    components: {
+      MuiPaper: {
+        styleOverrides: {
+          root: {
+            backgroundImage: isDark
+              ? "linear-gradient(180deg, rgba(0,255,106,0.045), rgba(0,0,0,0))"
+              : "linear-gradient(180deg, rgba(0,107,58,0.055), rgba(255,255,255,0))",
+            boxShadow: isDark
+              ? "0 0 0 1px rgba(0, 255, 106, 0.22), 0 0 28px rgba(0, 255, 106, 0.08), inset 0 0 18px rgba(0, 255, 106, 0.035)"
+              : "0 0 0 1px rgba(0, 107, 58, 0.14), 0 12px 32px rgba(0, 46, 22, 0.07), inset 0 0 18px rgba(0, 107, 58, 0.04)",
+            backdropFilter: "blur(10px)",
+          },
+        },
+      },
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            textTransform: "none",
+            fontWeight: 800,
+            borderRadius: 3,
+            letterSpacing: 0,
+            boxShadow: isDark
+              ? "0 0 18px rgba(0, 255, 106, 0.16)"
+              : "0 0 14px rgba(0, 107, 58, 0.08)",
+          },
+        },
+      },
+      MuiIconButton: {
+        styleOverrides: {
+          root: {
+            borderRadius: 3,
+          },
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: {
+            borderRadius: 3,
+            backgroundColor: isDark ? "rgba(0, 10, 5, 0.9)" : "rgba(253, 255, 253, 0.86)",
+            boxShadow: isDark
+              ? "inset 0 0 16px rgba(0, 255, 106, 0.06)"
+              : "inset 0 0 14px rgba(0, 107, 58, 0.045)",
+          },
+          notchedOutline: {
+            borderColor: isDark ? "rgba(0, 255, 106, 0.32)" : "rgba(0, 107, 58, 0.24)",
+          },
+        },
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: {
+            borderRadius: 3,
+            fontWeight: 800,
+            backgroundColor: isDark ? "rgba(0, 255, 106, 0.08)" : "rgba(0, 107, 58, 0.075)",
+            borderColor: isDark ? "rgba(0, 255, 106, 0.28)" : "rgba(0, 107, 58, 0.22)",
+          },
         },
       },
     },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: "none",
-          fontWeight: 700,
-          borderRadius: 4,
-        },
-      },
-    },
-    MuiOutlinedInput: {
-      styleOverrides: {
-        root: {
-          borderRadius: 4,
-          backgroundColor: isDark ? "#060909" : "#fbfdfb",
-        },
-      },
-    },
-    MuiChip: {
-      styleOverrides: {
-        root: {
-          borderRadius: 4,
-          fontWeight: 700,
-        },
-      },
-    },
-  },
   });
 }
 
