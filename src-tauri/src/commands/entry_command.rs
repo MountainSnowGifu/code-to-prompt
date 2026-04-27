@@ -19,6 +19,12 @@ pub struct ExportSourceResponse {
     skipped_paths: Vec<String>,
 }
 
+#[derive(serde::Serialize)]
+pub struct SourceTextResponse {
+    content: String,
+    skipped_paths: Vec<String>,
+}
+
 #[tauri::command]
 pub fn get_diff_command(path: &str) -> Result<String, String> {
     eprintln!("[get_diff_command] called: path={path:?}");
@@ -60,6 +66,35 @@ pub fn export_diff_command(path: &str) -> Result<ExportDiffResponse, String> {
 #[tauri::command]
 pub fn count_source_chars_command(path: &str, paths: Vec<String>) -> Result<usize, String> {
     infra::count_source_chars(path, &paths).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub fn get_source_text_command(
+    path: &str,
+    paths: Vec<String>,
+) -> Result<SourceTextResponse, String> {
+    eprintln!(
+        "[get_source_text_command] called: path={path:?}, {} files",
+        paths.len()
+    );
+
+    match infra::read_source_text(path, &paths) {
+        Ok(result) => {
+            eprintln!(
+                "[get_source_text_command] success: {} bytes, {} skipped",
+                result.content.len(),
+                result.skipped_paths.len()
+            );
+            Ok(SourceTextResponse {
+                content: result.content,
+                skipped_paths: result.skipped_paths,
+            })
+        }
+        Err(err) => {
+            eprintln!("[get_source_text_command] error: {err}");
+            Err(err.to_string())
+        }
+    }
 }
 
 #[tauri::command]

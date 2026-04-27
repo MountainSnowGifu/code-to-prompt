@@ -3,6 +3,7 @@ import type {
   ExportDiffResponse,
   ExportEntryNamesResponse,
   ExportSourceResponse,
+  SourceTextResponse,
 } from "../types/entry";
 
 const GET_ENTRY_NAMES_COMMAND = "get_entry_names_command";
@@ -42,6 +43,10 @@ export function exportFilteredTree(path: string, paths: string[]) {
 
 export function exportSource(path: string, paths: string[]) {
   return invokeCommand<ExportSourceResponse>("export_source_command", { path, paths });
+}
+
+export function getSourceText(path: string, paths: string[]) {
+  return invokeCommand<SourceTextResponse>("get_source_text_command", { path, paths });
 }
 
 export function countSourceChars(path: string, paths: string[]) {

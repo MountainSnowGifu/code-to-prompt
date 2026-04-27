@@ -16,10 +16,11 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
-import { countSourceChars } from "../api/entryApi";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { countSourceChars, getSourceText } from "../api/entryApi";
 import { PromptTemplatesPanel } from "../../prompt/components/PromptTemplatesPanel";
 import { useEntryNames } from "../hooks/useEntryNames";
+import { toEntryErrorMessage } from "../lib/errorMessage";
 import { pickFolder } from "../../../shared/lib/tauri";
 import { useThemeMode } from "../../../app/providers/AppThemeProvider";
 
@@ -115,7 +116,9 @@ export function EntryPage() {
   const { mode, toggleMode } = useThemeMode();
   const [contentMode, setContentMode] = useState<ContentMode>("tree");
   const [langMode, setLangMode] = useState<LangMode>("all");
-  const [isCopied, setIsCopied] = useState(false);
+  const [copiedAction, setCopiedAction] = useState<"tree" | "source" | "diff" | null>(null);
+  const [isCopyingSource, setIsCopyingSource] = useState(false);
+  const copyStateRef = useRef({ path: "", filesKey: "" });
 
   const {
     path,
@@ -170,10 +173,17 @@ export function EntryPage() {
     };
   }, [scannedPath, filteredFiles]);
 
+  useEffect(() => {
+    copyStateRef.current = {
+      path: scannedPath,
+      filesKey: filteredFiles.join("\0"),
+    };
+  }, [scannedPath, filteredFiles]);
+
   const diffLines = diffContent.split("\n");
   const estimatedTokens =
     charCount === null ? null : Math.max(1, Math.ceil(charCount / 4));
-  const isAnyLoading = isLoading || isDiffLoading;
+  const isAnyLoading = isLoading || isDiffLoading || isCopyingSource;
   const panelEmpty =
     contentMode === "tree" ? filteredEntries.length === 0 : diffContent === "";
   const isInitialEmpty = scannedPath === "";
@@ -181,7 +191,6 @@ export function EntryPage() {
     contentMode === "tree" && entries.length > 0 && filteredEntries.length === 0;
 
   function handleTree() {
-    setLangMode("all");
     setContentMode("tree");
     scanEntries();
   }
@@ -193,7 +202,10 @@ export function EntryPage() {
 
   async function handlePickFolder() {
     const selected = await pickFolder();
-    if (selected) setPath(selected);
+    if (!selected) return;
+    setPath(selected);
+    setContentMode("tree");
+    scanEntries(selected);
   }
 
   async function handleCopyContent() {
@@ -201,10 +213,39 @@ export function EntryPage() {
       contentMode === "tree" ? filteredEntries.join("\n") : diffContent;
     try {
       await navigator.clipboard.writeText(text);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
+      const action = contentMode === "tree" ? "tree" : "diff";
+      setCopiedAction(action);
+      setTimeout(() => setCopiedAction(null), 2000);
     } catch {
-      showErrorMessage("Failed to copy content to clipboard.");
+      showErrorMessage("クリップボードにコピーできませんでした。");
+    }
+  }
+
+  async function handleCopySource() {
+    const requestedPath = scannedPath;
+    const requestedFiles = filteredFiles;
+    const requestedFilesKey = requestedFiles.join("\0");
+    setIsCopyingSource(true);
+    try {
+      const result = await getSourceText(requestedPath, requestedFiles);
+      await navigator.clipboard.writeText(result.content);
+      if (
+        copyStateRef.current.path !== requestedPath ||
+        copyStateRef.current.filesKey !== requestedFilesKey
+      ) {
+        return;
+      }
+      setCopiedAction("source");
+      setTimeout(() => setCopiedAction(null), 2000);
+      if (result.skipped_paths.length > 0) {
+        showErrorMessage(
+          `${result.skipped_paths.length}件の読み取れないファイルを除いてコピーしました。`,
+        );
+      }
+    } catch (err) {
+      showErrorMessage(toEntryErrorMessage(err));
+    } finally {
+      setIsCopyingSource(false);
     }
   }
 
@@ -293,6 +334,7 @@ export function EntryPage() {
                 placeholder="/path/to/your/project"
                 size="small"
                 fullWidth
+                disabled={isAnyLoading}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     if (contentMode === "diff") handleDiff();
@@ -304,6 +346,7 @@ export function EntryPage() {
                 <IconButton
                   onClick={handlePickFolder}
                   size="small"
+                  disabled={isAnyLoading}
                   sx={{ color: "primary.main", border: "1px solid", borderColor: "divider" }}
                 >
                   <FolderOpenIcon />
@@ -331,7 +374,7 @@ export function EntryPage() {
           </Paper>
 
           {contentMode === "tree" && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, overflowX: "auto", pb: 0.5 }}>
               <Typography
                 sx={{ fontSize: "0.78rem", fontWeight: 700, color: "text.secondary", textTransform: "uppercase" }}
               >
@@ -341,6 +384,7 @@ export function EntryPage() {
                 value={langMode}
                 exclusive
                 size="small"
+                sx={{ flexWrap: "wrap" }}
                 onChange={(_, val) => {
                   if (val !== null) setLangMode(val as LangMode);
                 }}
@@ -412,16 +456,22 @@ export function EntryPage() {
             <Stack
               direction="row"
               sx={{
-                alignItems: "center",
+                alignItems: { xs: "stretch", sm: "center" },
                 justifyContent: "space-between",
+                flexDirection: { xs: "column", sm: "row" },
                 gap: 2,
                 px: 2,
                 py: 1.5,
               }}
             >
-              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <Stack
+                direction="row"
+                spacing={1}
+                useFlexGap
+                sx={{ alignItems: "center", flexWrap: "wrap", minWidth: 0 }}
+              >
                 <Typography sx={{ fontWeight: 700 }}>
-                  {contentMode === "tree" ? "$ prompt-source" : "$ diff-source"}
+                  {contentMode === "tree" ? "$ source-tree" : "$ diff-source"}
                 </Typography>
                 {contentMode === "tree" && (
                   <>
@@ -459,21 +509,59 @@ export function EntryPage() {
                   </>
                 )}
               </Stack>
-              <Stack direction="row" spacing={1}>
+              <Stack
+                direction="row"
+                spacing={1}
+                useFlexGap
+                sx={{ flexWrap: "wrap", justifyContent: { xs: "flex-start", sm: "flex-end" } }}
+              >
                 <Tooltip title="Copy content to clipboard">
                   <span>
                     <Button
-                      variant={isCopied ? "contained" : "outlined"}
-                      color={isCopied ? "success" : "primary"}
+                      variant={
+                        copiedAction === (contentMode === "tree" ? "tree" : "diff")
+                          ? "contained"
+                          : "outlined"
+                      }
+                      color={
+                        copiedAction === (contentMode === "tree" ? "tree" : "diff")
+                          ? "success"
+                          : "primary"
+                      }
                       size="small"
                       disabled={panelEmpty}
                       onClick={handleCopyContent}
                       sx={{ minWidth: 80 }}
                     >
-                      {isCopied ? "Copied ✓" : "Copy"}
+                      {copiedAction === (contentMode === "tree" ? "tree" : "diff")
+                        ? "Copied ✓"
+                        : contentMode === "tree"
+                          ? "Copy tree"
+                          : "Copy diff"}
                     </Button>
                   </span>
                 </Tooltip>
+                {contentMode === "tree" && (
+                  <Tooltip title="Copy prompt-ready source code to clipboard">
+                    <span>
+                      <Button
+                        variant={copiedAction === "source" ? "contained" : "outlined"}
+                        color={copiedAction === "source" ? "success" : "primary"}
+                        size="small"
+                        disabled={scannedPath === "" || isCopyingSource || panelEmpty}
+                        onClick={handleCopySource}
+                      >
+                        {isCopyingSource ? (
+                          <CircularProgress size={18} />
+                        ) : copiedAction === "source" ? (
+                          "Copied ✓"
+                        ) : (
+                          "Copy source"
+                        )}
+                      </Button>
+                    </span>
+                  </Tooltip>
+                )}
                 {contentMode === "tree" && (
                   <Tooltip title="Export source code for each file">
                     <span>

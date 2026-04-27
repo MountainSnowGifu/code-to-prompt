@@ -12,3 +12,8 @@ export type ExportSourceResponse = {
   output_paths: string[];
   skipped_paths: string[];
 };
+
+export type SourceTextResponse = {
+  content: string;
+  skipped_paths: string[];
+};

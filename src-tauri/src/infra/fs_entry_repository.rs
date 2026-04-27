@@ -121,6 +121,7 @@ pub enum EntryRepositoryError {
     InvalidUtf8FileName { path: PathBuf },
     GitCommandFailed(String),
     NoReadableSourceFiles,
+    SourceTooLargeForClipboard { max_chars: usize },
     InvalidRelativePath(String),
 }
 
@@ -161,6 +162,12 @@ impl fmt::Display for EntryRepositoryError {
             }
             Self::NoReadableSourceFiles => {
                 write!(f, "no readable source files were found")
+            }
+            Self::SourceTooLargeForClipboard { max_chars } => {
+                write!(
+                    f,
+                    "source is too large to copy safely; use export instead (limit: {max_chars} chars)"
+                )
             }
             Self::InvalidRelativePath(path) => {
                 write!(f, "path must stay inside the selected folder: {path}")
@@ -312,6 +319,11 @@ pub struct SourceExportResult {
     pub skipped_paths: Vec<String>,
 }
 
+pub struct SourceTextResult {
+    pub content: String,
+    pub skipped_paths: Vec<String>,
+}
+
 pub fn write_source_file<P: AsRef<Path>>(
     folder_path: P,
     file_paths: &[String],
@@ -356,6 +368,26 @@ pub fn write_source_file<P: AsRef<Path>>(
 
     Ok(SourceExportResult {
         output_paths,
+        skipped_paths,
+    })
+}
+
+pub fn read_source_text<P: AsRef<Path>>(
+    folder_path: P,
+    file_paths: &[String],
+) -> Result<SourceTextResult, EntryRepositoryError> {
+    let (chunks, skipped_paths) = build_source_chunks(folder_path.as_ref(), file_paths)?;
+    if chunks.is_empty() {
+        return Err(EntryRepositoryError::NoReadableSourceFiles);
+    }
+    if chunks.len() > 1 {
+        return Err(EntryRepositoryError::SourceTooLargeForClipboard {
+            max_chars: SOURCE_CHUNK_CHARS,
+        });
+    }
+
+    Ok(SourceTextResult {
+        content: chunks.into_iter().next().unwrap_or_default(),
         skipped_paths,
     })
 }

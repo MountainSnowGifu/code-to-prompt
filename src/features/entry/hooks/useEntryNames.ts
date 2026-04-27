@@ -7,10 +7,7 @@ import {
   getFileTree,
   revealEntryNamesFile,
 } from "../api/entryApi";
-
-function toErrorMessage(err: unknown) {
-  return err instanceof Error ? err.message : String(err);
-}
+import { toEntryErrorMessage } from "../lib/errorMessage";
 
 export function useEntryNames() {
   const [path, setPath] = useState("");
@@ -39,10 +36,10 @@ export function useEntryNames() {
     setErrorMessage("");
   }
 
-  async function scanEntries() {
+  async function scanEntries(nextPath?: string) {
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
-    const requestedPath = path;
+    const requestedPath = nextPath ?? path;
     setIsLoading(true);
     setErrorMessage("");
     setSavedFilePaths([]);
@@ -55,7 +52,7 @@ export function useEntryNames() {
       setScannedPath(requestedPath);
     } catch (err) {
       if (requestIdRef.current !== requestId) return;
-      setErrorMessage(toErrorMessage(err));
+      setErrorMessage(toEntryErrorMessage(err));
     } finally {
       if (requestIdRef.current === requestId) setIsLoading(false);
     }
@@ -77,7 +74,7 @@ export function useEntryNames() {
       setScannedPath(requestedPath);
     } catch (err) {
       if (requestIdRef.current !== requestId) return;
-      setErrorMessage(toErrorMessage(err));
+      setErrorMessage(toEntryErrorMessage(err));
     } finally {
       if (requestIdRef.current === requestId) setIsDiffLoading(false);
     }
@@ -96,7 +93,7 @@ export function useEntryNames() {
       setSavedFilePaths([outputPath]);
     } catch (err) {
       if (requestIdRef.current !== requestId) return;
-      setErrorMessage(toErrorMessage(err));
+      setErrorMessage(toEntryErrorMessage(err));
     } finally {
       if (requestIdRef.current === requestId) setIsExporting(false);
     }
@@ -116,7 +113,7 @@ export function useEntryNames() {
       setSkippedSourcePaths(result.skipped_paths);
     } catch (err) {
       if (requestIdRef.current !== requestId) return;
-      setErrorMessage(toErrorMessage(err));
+      setErrorMessage(toEntryErrorMessage(err));
     } finally {
       if (requestIdRef.current === requestId) setIsExporting(false);
     }
@@ -136,7 +133,7 @@ export function useEntryNames() {
       setSavedFilePaths([result.output_path]);
     } catch (err) {
       if (requestIdRef.current !== requestId) return;
-      setErrorMessage(toErrorMessage(err));
+      setErrorMessage(toEntryErrorMessage(err));
     } finally {
       if (requestIdRef.current === requestId) setIsExporting(false);
     }
@@ -147,7 +144,7 @@ export function useEntryNames() {
     try {
       await revealEntryNamesFile(savedFilePaths[0]);
     } catch (err) {
-      setErrorMessage(toErrorMessage(err));
+      setErrorMessage(toEntryErrorMessage(err));
     }
   }
 

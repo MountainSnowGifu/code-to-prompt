@@ -5,7 +5,7 @@ mod infra;
 use commands::{
     count_source_chars_command, export_diff_command, export_entry_names_command,
     export_file_tree_command, export_filtered_tree_command, export_source_command,
-    get_diff_command, get_entry_names_command, get_file_tree_command,
+    get_diff_command, get_entry_names_command, get_file_tree_command, get_source_text_command,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -22,6 +22,7 @@ pub fn run() {
             export_diff_command,
             export_filtered_tree_command,
             export_source_command,
+            get_source_text_command,
             count_source_chars_command,
         ])
         .run(tauri::generate_context!())
