@@ -19,11 +19,11 @@ body {
 
 ::selection {
   color: #050607;
-  background: #39ff88;
+  background: #b9f7ca;
 }
 
 * {
-  scrollbar-color: #00ff6a #000704;
+  scrollbar-color: #8ff0b2 #000704;
 }
 
 .matrix-shell {
@@ -32,38 +32,15 @@ body {
   overflow: hidden;
 }
 
-.matrix-shell::before {
-  content: "010010 101101 011010 110001 001101 101011 011100 010111 111001 001010 100101 011011";
-  position: fixed;
-  inset: -20% -10% 0 -10%;
-  z-index: -2;
-  color: rgba(0, 255, 106, 0.12);
-  font: 700 18px/1.65 "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
-  letter-spacing: 0.22em;
-  word-spacing: 0.7em;
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  text-shadow: 0 0 10px rgba(0, 255, 106, 0.32);
-  transform: rotate(8deg);
-  animation: matrix-rain 24s linear infinite;
-  pointer-events: none;
-  white-space: pre-wrap;
-}
-
-.matrix-shell-light::before {
-  color: rgba(0, 92, 46, 0.1);
-  text-shadow: 0 0 8px rgba(0, 107, 58, 0.16);
-}
-
 .matrix-shell::after {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
   background:
-    linear-gradient(rgba(0, 255, 106, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 106, 0.02) 1px, transparent 1px),
-    radial-gradient(circle at 50% 0%, rgba(0, 255, 106, 0.18), transparent 380px),
+    linear-gradient(rgba(143, 240, 178, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(143, 240, 178, 0.02) 1px, transparent 1px),
+    radial-gradient(circle at 50% 0%, rgba(143, 240, 178, 0.18), transparent 380px),
     linear-gradient(180deg, rgba(0, 7, 4, 0.72), rgba(0, 0, 0, 0.94));
   background-size: 100% 4px, 32px 32px, auto, auto;
   pointer-events: none;
@@ -76,19 +53,4 @@ body {
     radial-gradient(circle at 50% 0%, rgba(0, 107, 58, 0.16), transparent 420px),
     linear-gradient(180deg, rgba(238, 250, 241, 0.9), rgba(220, 239, 226, 0.96));
   background-size: 100% 4px, 34px 34px, auto, auto;
-}
-
-@keyframes matrix-rain {
-  from {
-    transform: translateY(-18%) rotate(8deg);
-  }
-  to {
-    transform: translateY(18%) rotate(8deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .matrix-shell::before {
-    animation: none;
-  }
 }

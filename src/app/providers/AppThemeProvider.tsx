@@ -33,10 +33,10 @@ function buildTheme(mode: ThemeMode) {
     palette: {
       mode,
       primary: {
-        main: isDark ? "#00ff6a" : "#006b3a",
+        main: isDark ? "#8ff0b2" : "#006b3a",
       },
       success: {
-        main: isDark ? "#72ff9f" : "#008f4d",
+        main: isDark ? "#b9f7ca" : "#008f4d",
       },
       error: {
         main: isDark ? "#ff4d6d" : "#b4233b",
@@ -52,7 +52,7 @@ function buildTheme(mode: ThemeMode) {
         primary: isDark ? "#d9ffe5" : "#092316",
         secondary: isDark ? "#6dbe86" : "#386149",
       },
-      divider: isDark ? "rgba(0, 255, 106, 0.28)" : "rgba(0, 107, 58, 0.24)",
+      divider: isDark ? "rgba(143, 240, 178, 0.28)" : "rgba(0, 107, 58, 0.24)",
     },
     shape: {
       borderRadius: 4,
@@ -66,10 +66,10 @@ function buildTheme(mode: ThemeMode) {
         styleOverrides: {
           root: {
             backgroundImage: isDark
-              ? "linear-gradient(180deg, rgba(0,255,106,0.045), rgba(0,0,0,0))"
+              ? "linear-gradient(180deg, rgba(143,240,178,0.045), rgba(0,0,0,0))"
               : "linear-gradient(180deg, rgba(0,107,58,0.055), rgba(255,255,255,0))",
             boxShadow: isDark
-              ? "0 0 0 1px rgba(0, 255, 106, 0.22), 0 0 28px rgba(0, 255, 106, 0.08), inset 0 0 18px rgba(0, 255, 106, 0.035)"
+              ? "0 0 0 1px rgba(143, 240, 178, 0.22), 0 0 28px rgba(143, 240, 178, 0.08), inset 0 0 18px rgba(143, 240, 178, 0.035)"
               : "0 0 0 1px rgba(0, 107, 58, 0.14), 0 12px 32px rgba(0, 46, 22, 0.07), inset 0 0 18px rgba(0, 107, 58, 0.04)",
             backdropFilter: "blur(10px)",
           },
@@ -83,7 +83,7 @@ function buildTheme(mode: ThemeMode) {
             borderRadius: 3,
             letterSpacing: 0,
             boxShadow: isDark
-              ? "0 0 18px rgba(0, 255, 106, 0.16)"
+              ? "0 0 18px rgba(143, 240, 178, 0.16)"
               : "0 0 14px rgba(0, 107, 58, 0.08)",
           },
         },
@@ -101,11 +101,11 @@ function buildTheme(mode: ThemeMode) {
             borderRadius: 3,
             backgroundColor: isDark ? "rgba(0, 10, 5, 0.9)" : "rgba(253, 255, 253, 0.86)",
             boxShadow: isDark
-              ? "inset 0 0 16px rgba(0, 255, 106, 0.06)"
+              ? "inset 0 0 16px rgba(143, 240, 178, 0.06)"
               : "inset 0 0 14px rgba(0, 107, 58, 0.045)",
           },
           notchedOutline: {
-            borderColor: isDark ? "rgba(0, 255, 106, 0.32)" : "rgba(0, 107, 58, 0.24)",
+            borderColor: isDark ? "rgba(143, 240, 178, 0.32)" : "rgba(0, 107, 58, 0.24)",
           },
         },
       },
@@ -114,8 +114,8 @@ function buildTheme(mode: ThemeMode) {
           root: {
             borderRadius: 3,
             fontWeight: 800,
-            backgroundColor: isDark ? "rgba(0, 255, 106, 0.08)" : "rgba(0, 107, 58, 0.075)",
-            borderColor: isDark ? "rgba(0, 255, 106, 0.28)" : "rgba(0, 107, 58, 0.22)",
+            backgroundColor: isDark ? "rgba(143, 240, 178, 0.08)" : "rgba(0, 107, 58, 0.075)",
+            borderColor: isDark ? "rgba(143, 240, 178, 0.28)" : "rgba(0, 107, 58, 0.22)",
           },
         },
       },

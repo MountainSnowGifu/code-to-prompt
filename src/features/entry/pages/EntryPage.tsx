@@ -23,6 +23,7 @@ import { useEntryNames } from "../hooks/useEntryNames";
 import { toEntryErrorMessage } from "../lib/errorMessage";
 import { pickFolder } from "../../../shared/lib/tauri";
 import { useThemeMode } from "../../../app/providers/AppThemeProvider";
+import { MatrixRain } from "../components/MatrixRain";
 
 type ContentMode = "tree" | "diff";
 type LangMode = "all" | "rust" | "haskell" | "csharp" | "react" | "fsharp";
@@ -116,6 +117,7 @@ export function EntryPage() {
   const { mode, toggleMode } = useThemeMode();
   const [contentMode, setContentMode] = useState<ContentMode>("tree");
   const [langMode, setLangMode] = useState<LangMode>("all");
+  const [rainEnabled, setRainEnabled] = useState(true);
   const [copiedAction, setCopiedAction] = useState<"tree" | "source" | "diff" | null>(null);
   const [isCopyingSource, setIsCopyingSource] = useState(false);
   const copyStateRef = useRef({ path: "", filesKey: "" });
@@ -262,6 +264,7 @@ export function EntryPage() {
             : "linear-gradient(180deg, rgba(238, 250, 241, 0.7), rgba(220, 239, 226, 0.94))",
       }}
     >
+      {rainEnabled && <MatrixRain />}
       <Container maxWidth="md">
         <Stack spacing={3}>
           <Box
@@ -276,7 +279,7 @@ export function EntryPage() {
               pl: 2,
               textShadow:
                 theme.palette.mode === "dark"
-                  ? "0 0 16px rgba(0, 255, 106, 0.34)"
+                  ? "0 0 16px rgba(143, 240, 178, 0.34)"
                   : "0 0 12px rgba(0, 107, 58, 0.12)",
             }}
           >
@@ -302,29 +305,47 @@ export function EntryPage() {
                   fontWeight: 900,
                   textShadow:
                     theme.palette.mode === "dark"
-                      ? "0 0 22px rgba(0, 255, 106, 0.42)"
+                      ? "0 0 22px rgba(143, 240, 178, 0.42)"
                       : "0 0 14px rgba(0, 107, 58, 0.16)",
                 }}
               >
                 {contentMode === "tree" ? "Code to Prompt" : "Diff to Prompt"}
               </Typography>
             </Box>
-            <Tooltip title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
-              <IconButton
-                aria-label={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                onClick={toggleMode}
-                size="small"
-                sx={{
-                  flexShrink: 0,
-                  color: "primary.main",
-                  border: "1px solid",
-                  borderColor: "divider",
-                  bgcolor: "background.paper",
-                }}
-              >
-                <ThemeModeIcon mode={mode} />
-              </IconButton>
-            </Tooltip>
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexShrink: 0 }}>
+              <Tooltip title={rainEnabled ? "Hide matrix rain" : "Show matrix rain"}>
+                <Button
+                  aria-pressed={rainEnabled}
+                  onClick={() => setRainEnabled((current) => !current)}
+                  size="small"
+                  variant={rainEnabled ? "contained" : "outlined"}
+                  sx={{
+                    minWidth: 88,
+                    height: 32,
+                    px: 1.25,
+                    fontSize: "0.72rem",
+                  }}
+                >
+                  {rainEnabled ? "RAIN ON" : "RAIN OFF"}
+                </Button>
+              </Tooltip>
+              <Tooltip title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
+                <IconButton
+                  aria-label={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                  onClick={toggleMode}
+                  size="small"
+                  sx={{
+                    flexShrink: 0,
+                    color: "primary.main",
+                    border: "1px solid",
+                    borderColor: "divider",
+                    bgcolor: "background.paper",
+                  }}
+                >
+                  <ThemeModeIcon mode={mode} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
           </Box>
 
           <Paper
@@ -345,7 +366,7 @@ export function EntryPage() {
                 borderTop: "1px solid",
                 borderColor:
                   theme.palette.mode === "dark"
-                    ? "rgba(114, 255, 159, 0.42)"
+                    ? "rgba(178, 245, 199, 0.42)"
                     : "rgba(0, 107, 58, 0.22)",
                 pointerEvents: "none",
               },
@@ -408,7 +429,7 @@ export function EntryPage() {
                   textTransform: "uppercase",
                   textShadow:
                     theme.palette.mode === "dark"
-                      ? "0 0 12px rgba(0, 255, 106, 0.28)"
+                      ? "0 0 12px rgba(143, 240, 178, 0.28)"
                       : "0 0 10px rgba(0, 107, 58, 0.12)",
                 }}
               >
@@ -492,7 +513,7 @@ export function EntryPage() {
                 inset: 0,
                 background:
                   theme.palette.mode === "dark"
-                    ? "linear-gradient(90deg, rgba(0,255,106,0.1), transparent 24%, transparent 76%, rgba(0,255,106,0.08))"
+                    ? "linear-gradient(90deg, rgba(143,240,178,0.1), transparent 24%, transparent 76%, rgba(143,240,178,0.08))"
                     : "linear-gradient(90deg, rgba(0,107,58,0.08), transparent 24%, transparent 76%, rgba(0,107,58,0.06))",
                 pointerEvents: "none",
               },
@@ -669,7 +690,7 @@ export function EntryPage() {
                   fontSize: "0.82rem",
                   textShadow:
                     theme.palette.mode === "dark"
-                      ? "0 0 8px rgba(0, 255, 106, 0.18)"
+                      ? "0 0 8px rgba(143, 240, 178, 0.18)"
                       : "none",
                 }}
               >
@@ -688,7 +709,7 @@ export function EntryPage() {
                             "&:hover": {
                               bgcolor:
                                 theme.palette.mode === "dark"
-                                  ? "rgba(57, 255, 136, 0.08)"
+                                  ? "rgba(143, 240, 178, 0.08)"
                                   : "rgba(0, 122, 69, 0.08)",
                             },
                             whiteSpace: "nowrap",
