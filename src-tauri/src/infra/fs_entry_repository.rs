@@ -4,10 +4,22 @@ use std::fmt;
 use std::fs;
 use std::io;
 use std::path::{Component, Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Output};
 
 fn now_str() -> String {
     Local::now().format("%Y%m%d%H%M%S").to_string()
+}
+
+fn git_output<P: AsRef<Path>>(
+    folder_path: P,
+    args: &[&str],
+) -> Result<Output, EntryRepositoryError> {
+    Command::new("git")
+        .args(["-c", "core.quotePath=false"])
+        .args(args)
+        .current_dir(folder_path)
+        .output()
+        .map_err(|err| EntryRepositoryError::GitCommandFailed(err.to_string()))
 }
 
 struct TreeNode {
@@ -210,11 +222,10 @@ pub fn get_file_tree<P: AsRef<Path>>(folder_path: P) -> Result<Vec<String>, Entr
         ));
     }
 
-    let output = Command::new("git")
-        .args(["ls-files", "--cached", "--others", "--exclude-standard"])
-        .current_dir(folder_path)
-        .output()
-        .map_err(|err| EntryRepositoryError::GitCommandFailed(err.to_string()))?;
+    let output = git_output(
+        folder_path,
+        &["ls-files", "--cached", "--others", "--exclude-standard"],
+    )?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -294,7 +305,7 @@ fn build_file_tree_text(folder_path: &Path, tree_paths: &[String]) -> String {
     out
 }
 
-const SOURCE_CHUNK_CHARS: usize = 30_000;
+const SOURCE_CHUNK_CHARS: usize = 50_000;
 
 pub struct SourceExportResult {
     pub output_paths: Vec<PathBuf>,
@@ -421,11 +432,7 @@ pub fn get_git_diff<P: AsRef<Path>>(folder_path: P) -> Result<String, EntryRepos
         ));
     }
 
-    let tracked_output = Command::new("git")
-        .args(["diff", "HEAD"])
-        .current_dir(folder_path)
-        .output()
-        .map_err(|err| EntryRepositoryError::GitCommandFailed(err.to_string()))?;
+    let tracked_output = git_output(folder_path, &["diff", "HEAD"])?;
 
     if !tracked_output.status.success() {
         let stderr = String::from_utf8_lossy(&tracked_output.stderr);
@@ -434,11 +441,8 @@ pub fn get_git_diff<P: AsRef<Path>>(folder_path: P) -> Result<String, EntryRepos
         ));
     }
 
-    let untracked_output = Command::new("git")
-        .args(["ls-files", "--others", "--exclude-standard"])
-        .current_dir(folder_path)
-        .output()
-        .map_err(|err| EntryRepositoryError::GitCommandFailed(err.to_string()))?;
+    let untracked_output =
+        git_output(folder_path, &["ls-files", "--others", "--exclude-standard"])?;
 
     if !untracked_output.status.success() {
         let stderr = String::from_utf8_lossy(&untracked_output.stderr);
