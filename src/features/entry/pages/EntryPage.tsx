@@ -112,7 +112,11 @@ function diffLineColor(line: string): string {
   return "text.primary";
 }
 
-export function EntryPage() {
+interface Props {
+  onAgentNav: () => void;
+}
+
+export function EntryPage({ onAgentNav }: Props) {
   const theme = useTheme();
   const { mode, toggleMode } = useThemeMode();
   const [contentMode, setContentMode] = useState<ContentMode>("tree");
@@ -313,6 +317,16 @@ export function EntryPage() {
               </Typography>
             </Box>
             <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexShrink: 0 }}>
+              <Tooltip title="Switch to Agent Executor">
+                <Button
+                  onClick={onAgentNav}
+                  size="small"
+                  variant="outlined"
+                  sx={{ minWidth: 72, height: 32, px: 1.25, fontSize: "0.72rem" }}
+                >
+                  AGENT
+                </Button>
+              </Tooltip>
               <Tooltip title={rainEnabled ? "Hide matrix rain" : "Show matrix rain"}>
                 <Button
                   aria-pressed={rainEnabled}
