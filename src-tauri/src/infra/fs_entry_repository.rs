@@ -312,7 +312,7 @@ fn build_file_tree_text(folder_path: &Path, tree_paths: &[String]) -> String {
     out
 }
 
-const SOURCE_CHUNK_CHARS: usize = 50_000;
+const SOURCE_CHUNK_CHARS: usize = 80_000;
 
 pub struct SourceExportResult {
     pub output_paths: Vec<PathBuf>,
@@ -385,9 +385,15 @@ pub fn read_source_text<P: AsRef<Path>>(
             max_chars: SOURCE_CHUNK_CHARS,
         });
     }
+    let content = chunks.into_iter().next().unwrap_or_default();
+    if content.chars().count() > SOURCE_CHUNK_CHARS {
+        return Err(EntryRepositoryError::SourceTooLargeForClipboard {
+            max_chars: SOURCE_CHUNK_CHARS,
+        });
+    }
 
     Ok(SourceTextResult {
-        content: chunks.into_iter().next().unwrap_or_default(),
+        content,
         skipped_paths,
     })
 }
@@ -464,7 +470,12 @@ pub fn get_git_diff<P: AsRef<Path>>(folder_path: P) -> Result<String, EntryRepos
         ));
     }
 
-    let tracked_output = git_output(folder_path, &["diff", "HEAD"])?;
+    let head_output = git_output(folder_path, &["rev-parse", "--verify", "HEAD"])?;
+    let tracked_output = if head_output.status.success() {
+        git_output(folder_path, &["diff", "HEAD"])?
+    } else {
+        git_output(folder_path, &["diff", "--cached"])?
+    };
 
     if !tracked_output.status.success() {
         let stderr = String::from_utf8_lossy(&tracked_output.stderr);
@@ -705,5 +716,84 @@ fn sanitize_file_name(value: &str) -> String {
         "entries".to_string()
     } else {
         sanitized
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Command;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_dir(name: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be after unix epoch")
+            .as_nanos();
+        let path = env::temp_dir().join(format!(
+            "code-to-prompt-{name}-{}-{nanos}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&path).expect("failed to create temp dir");
+        path
+    }
+
+    fn run_git(folder_path: &Path, args: &[&str]) {
+        let output = Command::new("git")
+            .args(args)
+            .current_dir(folder_path)
+            .output()
+            .expect("failed to run git");
+        assert!(
+            output.status.success(),
+            "git {:?} failed: {}",
+            args,
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    #[test]
+    fn read_source_text_rejects_single_file_over_clipboard_limit() {
+        let folder_path = temp_dir("large-source");
+        let file_path = folder_path.join("large.txt");
+        fs::write(&file_path, "a".repeat(SOURCE_CHUNK_CHARS + 1))
+            .expect("failed to write source file");
+
+        let result = read_source_text(&folder_path, &["large.txt".to_string()]);
+
+        assert!(matches!(
+            result,
+            Err(EntryRepositoryError::SourceTooLargeForClipboard {
+                max_chars: SOURCE_CHUNK_CHARS
+            })
+        ));
+        fs::remove_dir_all(folder_path).expect("failed to remove temp dir");
+    }
+
+    #[test]
+    fn git_diff_includes_untracked_files_before_first_commit() {
+        let folder_path = temp_dir("unborn-untracked");
+        run_git(&folder_path, &["init"]);
+        fs::write(folder_path.join("alpha.txt"), "hello\n").expect("failed to write file");
+
+        let diff = get_git_diff(&folder_path).expect("failed to get git diff");
+
+        assert!(diff.contains("diff --git a/alpha.txt b/alpha.txt"));
+        assert!(diff.contains("+hello"));
+        fs::remove_dir_all(folder_path).expect("failed to remove temp dir");
+    }
+
+    #[test]
+    fn git_diff_includes_staged_files_before_first_commit() {
+        let folder_path = temp_dir("unborn-staged");
+        run_git(&folder_path, &["init"]);
+        fs::write(folder_path.join("staged.txt"), "ready\n").expect("failed to write file");
+        run_git(&folder_path, &["add", "staged.txt"]);
+
+        let diff = get_git_diff(&folder_path).expect("failed to get git diff");
+
+        assert!(diff.contains("diff --git a/staged.txt b/staged.txt"));
+        assert!(diff.contains("+ready"));
+        fs::remove_dir_all(folder_path).expect("failed to remove temp dir");
     }
 }

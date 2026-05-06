@@ -1,39 +1,22 @@
 import type { PromptTemplate } from "../types/prompt";
+import defaultTemplates from "./defaultTemplates.json";
 
-export const DEFAULT_TEMPLATES: PromptTemplate[] = [
-  {
-    id: "default-review",
-    title: "コードレビュー",
-    body: "添付のコードをレビューしてください。\nバグ・改善点・ベストプラクティスの観点から具体的に指摘してください。",
-  },
-  {
-    id: "default-bug",
-    title: "バグ修正",
-    body: "添付のコードにバグがあります。\nバグを特定し、修正したコードを提示してください。修正箇所とその理由も説明してください。",
-  },
-  {
-    id: "default-refactor",
-    title: "リファクタリング",
-    body: "添付のコードをリファクタリングしてください。\n可読性・保守性・パフォーマンスの観点で改善し、変更点とその理由を説明してください。",
-  },
-  {
-    id: "default-test",
-    title: "テスト作成",
-    body: "添付のコードに対するユニットテストを作成してください。\n正常系・異常系・エッジケースを網羅してください。",
-  },
-  {
-    id: "default-explain",
-    title: "コード説明",
-    body: "添付のコードを詳しく説明してください。\n各関数・クラスの役割と全体の処理フローをわかりやすく解説してください。",
-  },
-  {
-    id: "default-security",
-    title: "セキュリティ確認",
-    body: "添付のコードのセキュリティ上の問題点を指摘してください。\n脆弱性がある場合は、リスクの説明と修正方法を示してください。",
-  },
-  {
-    id: "default-commit-message",
-    title: "コミットメッセージ作成",
-    body: "添付の差分をもとに、適切なコミットメッセージを作成してください。\n変更内容が伝わる件名と、必要に応じて本文を日本語で提案してください。\nマークダウンで出力してください。",
-  },
-];
+function isPromptTemplate(value: unknown): value is PromptTemplate {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Partial<Record<keyof PromptTemplate, unknown>>;
+  return (
+    typeof item.id === "string" &&
+    typeof item.title === "string" &&
+    typeof item.body === "string"
+  );
+}
+
+function loadDefaultTemplates(): PromptTemplate[] {
+  const parsed: unknown = defaultTemplates;
+  if (!Array.isArray(parsed) || !parsed.every(isPromptTemplate)) {
+    throw new Error("defaultTemplates.json must contain prompt templates");
+  }
+  return parsed;
+}
+
+export const DEFAULT_TEMPLATES: PromptTemplate[] = loadDefaultTemplates();
